@@ -137,42 +137,17 @@ async function chatWithOpenRouter(messages: Message[], apiKey: string): Promise<
 }
 
 async function assertAuthorizedChat(request: Request): Promise<NextResponse | null> {
-  if (isAuthEmulator()) {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
-    const rl = rateLimitHit(`chat:emu:${ip}`, 45, 60_000);
-    if (!rl.ok) {
-      return NextResponse.json({ error: "rate_limited", detail: String(rl.retryAfterSec ?? 60) }, { status: 429 });
-    }
-    return null;
+  // Extract IP for rate limiting
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "local_user";
+  
+  // Rate limiting par IP pour tout le monde (connecté ou non)
+  const rl = rateLimitHit(`chat:ip:${ip}`, 45, 60_000);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "rate_limited", detail: String(rl.retryAfterSec ?? 60) }, { status: 429 });
   }
 
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-  if (!token) {
-    return NextResponse.json(
-      {
-        error: "unauthorized",
-        detail: "Authorization: Bearer <Firebase ID token> requis (getIdToken() côté client).",
-      },
-      { status: 401 },
-    );
-  }
-
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
-  if (!projectId) {
-    return NextResponse.json({ error: "server_misconfig", detail: "NEXT_PUBLIC_FIREBASE_PROJECT_ID manquant." }, { status: 500 });
-  }
-
-  try {
-    const { uid } = await verifyFirebaseIdToken(token, projectId);
-    const rl = rateLimitHit(`chat:uid:${uid}`, 36, 60_000);
-    if (!rl.ok) {
-      return NextResponse.json({ error: "rate_limited", detail: String(rl.retryAfterSec ?? 60) }, { status: 429 });
-    }
-  } catch {
-    return NextResponse.json({ error: "unauthorized", detail: "Jeton Firebase invalide ou expiré." }, { status: 401 });
-  }
-
+  // L'API Chat est désormais publique (sans authentification stricte)
+  // Cela permet à la Landing Page d'utiliser le Chatbot.
   return null;
 }
 

@@ -11,4 +11,5 @@ export const COL = {
   marketplaceProducts: "marketplaceProducts",
   marketplaceMessages: "marketplaceMessages",
   cityEvents: "cityEvents",
+  installationRequests: "installationRequests",
 } as const;

@@ -760,3 +760,55 @@ export async function deleteCityEvent(id: string) {
   requireAuthUid();
   await deleteDoc(doc(getFirebaseDb(), COL.cityEvents, id));
 }
+
+/* ---------- Installation Requests (Landing Page) ---------- */
+
+import type { InstallationRequest } from "@/models/types";
+
+export async function createInstallationRequest(data: { name: string; email?: string; phone: string; location: string; size: string }) {
+  // Allow unauthenticated creation since it's from the landing page.
+  const db = getFirebaseDb();
+  await addDoc(collection(db, COL.installationRequests), {
+    name: data.name.trim(),
+    email: data.email?.trim() || "",
+    phone: data.phone.trim(),
+    location: data.location.trim(),
+    size: data.size.trim(),
+    status: "pending",
+    createdAt: serverTimestamp(),
+  });
+}
+
+function mapInstallationRequestDoc(id: string, x: DocumentData): InstallationRequest {
+  return {
+    id,
+    name: String(x.name ?? ""),
+    email: x.email ? String(x.email) : undefined,
+    phone: String(x.phone ?? ""),
+    location: String(x.location ?? ""),
+    size: String(x.size ?? ""),
+    status: (x.status === "contacted" || x.status === "installed" ? x.status : "pending") as InstallationRequest["status"],
+    createdAt: tsToIso(x.createdAt),
+  };
+}
+
+export function subscribeInstallationRequests(cb: (items: InstallationRequest[]) => void): Unsubscribe {
+  const db = getFirebaseDb();
+  const q = query(collection(db, COL.installationRequests), orderBy("createdAt", "desc"), limit(100));
+  return onSnapshot(
+    q,
+    (snap) => {
+      const items = snap.docs.map((d) => mapInstallationRequestDoc(d.id, d.data()));
+      cb(items);
+    },
+    (err) => {
+      console.warn("[installationRequests]", err.code, err.message);
+      cb([]);
+    },
+  );
+}
+
+export async function updateInstallationRequestStatus(id: string, status: InstallationRequest["status"]) {
+  requireAuthUid(); // Only admins can update status (handled by role check in component, but requireAuthUid ensures logged in)
+  await updateDoc(doc(getFirebaseDb(), COL.installationRequests, id), { status });
+}

@@ -23,12 +23,14 @@ import { cn } from "@/lib/cn";
 import type { Lang, UserRole } from "@/models/types";
 import { AdminEventsPanel } from "./AdminEventsPanel";
 import { AdminStatsPanel } from "./AdminStatsPanel";
-import { Chatbot } from "./Chatbot";
+
 import { EnvironmentalMap } from "./EnvironmentalMap";
 import { FarmerSoilSensorView } from "./FarmerSoilSensorView";
 import { FarmerWaterWasteView } from "./FarmerWaterWasteView";
 import { ProfileView } from "./ProfileView";
 import { SpaceReclamationView } from "./SpaceReclamationView";
+import { OpenDataStatsModal } from "./OpenDataStatsModal";
+import { AdminRequestsPanel } from "./AdminRequestsPanel";
 
 type NavItem = { id: string; label: string; icon: typeof MessageCircle };
 
@@ -53,12 +55,19 @@ function navForRole(role: UserRole, t: (fr: string, ar: string) => string): NavI
       { id: "eau", label: t("Modèle gaspillage d’eau", "نموذج هدر المياه"), icon: Droplets },
       { id: "pollution", label: t("Alerte & heatmap pollution air", "تنبيه وخريطة تلوث الهواء"), icon: Wind },
       { id: "reclamation", label: t("Réclamation", "شكوى"), icon: ClipboardList },
-      { id: "chat", label: t("Expert IA — اسألني", "خبير ذكي — اسألني"), icon: MessageCircle },
+
       { id: "profile", label: t("Mon profil", "ملفي"), icon: User },
     ];
   }
   return [
+    // Tech Dash (IoT & IA)
+    { id: "capteur", label: t("Capteur sol", "مستشعر التربة"), icon: Layers3 },
+    { id: "eau", label: t("Modèle gaspillage d’eau", "نموذج هدر المياه"), icon: Droplets },
+    { id: "pollution", label: t("Alerte & heatmap pollution air", "تنبيه وخريطة تلوث الهواء"), icon: Wind },
+
+    // Admin Dash
     { id: "reclamations", label: t("Réclamation", "شكوى"), icon: Inbox },
+    { id: "installations", label: t("Demandes d'installation", "طلبات التركيب"), icon: ClipboardList },
     { id: "events", label: t("Événement", "فعاليات"), icon: CalendarDays },
     { id: "stats", label: t("Statistique", "إحصائيات"), icon: PieChart },
     { id: "profile", label: t("Mon profil", "ملفي"), icon: User },
@@ -92,8 +101,8 @@ export function DimaAppView({
       <div className="max-w-[1600px] mx-auto min-h-screen flex flex-col p-4 md:p-8 relative z-10">
         <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-10 shrink-0">
           <div className="flex items-center gap-4 sm:gap-6 min-w-0 flex-wrap">
-            <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center text-emerald-600 border border-white/80 shrink-0">
-              <TreeDeciduous size={30} />
+            <div className="w-14 h-14 md:w-16 md:h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center shrink-0 p-2 overflow-hidden">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div className="min-w-0">
               <h1
@@ -224,16 +233,37 @@ export function DimaAppView({
                     {activeTab === "reclamation" && (
                       <SpaceReclamationView t={t} variant="citizen" userUid={userUid} userEmail={userEmail} />
                     )}
-                    {activeTab === "chat" && <Chatbot t={t} isRTL={isRTL} />}
+
                     {activeTab === "profile" && <ProfileView t={t} userUid={userUid} userEmail={userEmail} />}
                   </>
                 )}
 
                 {role === "ADMIN" && (
                   <>
+                    {/* Tech Dash views */}
+                    {activeTab === "capteur" && <FarmerSoilSensorView t={t} />}
+                    {activeTab === "eau" && <FarmerWaterWasteView t={t} />}
+                    {activeTab === "pollution" && (
+                      <div className="space-y-4">
+                        <div className="rounded-[2rem] bg-white/70 border border-white px-6 py-4 shadow-sm">
+                          <h2 className="text-lg font-black text-zinc-900 uppercase tracking-tight flex items-center gap-2">
+                            <Wind className="text-emerald-600" size={22} />
+                            {t("Alerte qualité de l’air & heatmap", "تنبيه جودة الهواء والخريطة الحرارية")}
+                          </h2>
+                          <p className="text-xs text-zinc-500 font-bold mt-1">
+                            {t("Visualisation indicative (PM2.5, zones sensibles).", "عرض توضيحي (جسيمات، مناطق حساسة).")}
+                          </p>
+                        </div>
+                        <EnvironmentalMap t={t} />
+                      </div>
+                    )}
+
+                    
+                    {/* Admin views */}
                     {activeTab === "reclamations" && (
                       <SpaceReclamationView t={t} variant="admin" userUid={userUid} userEmail={userEmail} />
                     )}
+                    {activeTab === "installations" && <AdminRequestsPanel t={t} />}
                     {activeTab === "events" && <AdminEventsPanel t={t} events={events} />}
                     {activeTab === "stats" && <AdminStatsPanel t={t} />}
                     {activeTab === "profile" && <ProfileView t={t} userUid={userUid} userEmail={userEmail} />}

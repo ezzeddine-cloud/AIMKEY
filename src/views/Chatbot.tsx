@@ -43,16 +43,8 @@ export function Chatbot({ t }: { t: (fr: string, ar: string) => string; isRTL: b
 
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (isFirebaseConfigured() && !isEmulatorMode()) {
-        const u = getFirebaseAuth().currentUser;
-        if (!u) {
-          throw new Error(
-            t("Connectez-vous pour utiliser le chatbot.", "سجّل الدخول باش تستعمل المساعد."),
-          );
-        }
-        const idToken = await u.getIdToken();
-        headers.Authorization = `Bearer ${idToken}`;
-      }
+      // Note: L'API est maintenant publique pour le Chatbot de la Landing Page.
+      // Nous n'avons plus besoin d'envoyer le Bearer Token.
 
       const res = await fetch("/api/chat", {
         method: "POST",

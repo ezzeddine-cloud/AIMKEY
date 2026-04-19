@@ -184,3 +184,15 @@ export interface CityEvent {
   /** URL image (optionnel). */
   imageUrl: string;
 }
+
+/** Demande d'installation soumise depuis la page d'accueil (Landing Page). */
+export interface InstallationRequest {
+  id: string;
+  name: string;
+  email?: string;
+  phone: string;
+  location: string;
+  size: string;
+  status: "pending" | "contacted" | "installed";
+  createdAt: string | null;
+}

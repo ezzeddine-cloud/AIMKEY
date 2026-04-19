@@ -164,5 +164,10 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/marketplaceProducts/$(request.resource.data.productId)).data.sellerUid != request.auth.uid;
       allow update, delete: if false;
     }
+
+    match /installationRequests/{id} {
+      allow create: if true; // Unauthenticated users can submit requests
+      allow read, update, delete: if isAdmin();
+    }
   }
 }
