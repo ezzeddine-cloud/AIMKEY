@@ -1,0 +1,173 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    /** Ne pas lire .data si le profil n’existe pas encore — sinon l’évaluation des règles échoue. */
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+
+    /** Auteur du post forum (pour cascades modération / suppression du fil). */
+    function isForumPostAuthor(postId) {
+      return postId is string
+        && exists(/databases/$(database)/documents/forumPosts/$(postId))
+        && get(/databases/$(database)/documents/forumPosts/$(postId)).data.authorUid == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if signedIn() && request.auth.uid == userId;
+    }
+
+    match /news/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /adminNotifications/{nid} {
+      allow create: if signedIn()
+        && request.resource.data.type == 'forum_post_report'
+        && request.resource.data.reporterUid == request.auth.uid
+        && request.resource.data.postId is string
+        && request.resource.data.postTitle is string
+        && request.resource.data.reporterEmail is string
+        && request.resource.data.reason is string
+        && request.resource.data.bodyFr is string
+        && request.resource.data.bodyAr is string
+        && request.resource.data.read == false;
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /cityEvents/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /donationProjects/{id} {
+      allow read: if signedIn();
+      allow create, delete: if isAdmin();
+      /** IDOR : seuls les admins modifient les métadonnées ; les utilisateurs ne peuvent qu’augmenter `current` (dons), avec plafond par écriture. */
+      allow update: if isAdmin() || (
+        signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['current'])
+        && request.resource.data.current is number
+        && resource.data.current is number
+        && request.resource.data.current > resource.data.current
+        && request.resource.data.current <= resource.data.current + 100000
+      );
+    }
+
+    match /forumPosts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.authorRole in ['CITIZEN', 'FARMER', 'ADMIN']
+        && request.resource.data.anonymous is bool;
+      allow update: if signedIn() && (
+        isAdmin() ||
+        (resource.data.authorUid == request.auth.uid && request.resource.data.authorUid == resource.data.authorUid) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'dislikes', 'reports'])
+      );
+      allow delete: if signedIn() && (resource.data.authorUid == request.auth.uid || isAdmin());
+    }
+
+    match /forumVotes/{voteId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.postId is string
+        && request.resource.data.type in ['like', 'dislike'];
+      allow update: if signedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if signedIn() && (
+        resource.data.userId == request.auth.uid
+        || isAdmin()
+        || isForumPostAuthor(resource.data.postId)
+      );
+    }
+
+    match /forumReplyVotes/{voteId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.postId is string
+        && request.resource.data.replyId is string
+        && request.resource.data.type in ['like', 'dislike'];
+      allow update: if signedIn() && resource.data.userId == request.auth.uid;
+      allow delete: if signedIn() && (
+        resource.data.userId == request.auth.uid
+        || isAdmin()
+        || isForumPostAuthor(resource.data.postId)
+      );
+    }
+
+    match /forumReplies/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.authorRole in ['CITIZEN', 'FARMER', 'ADMIN']
+        && request.resource.data.anonymous is bool
+        && request.resource.data.postId is string
+        && request.resource.data.text is string
+        && request.resource.data.text.size() <= 2000
+        && (!('parentReplyId' in request.resource.data) || request.resource.data.parentReplyId is string);
+      allow update: if signedIn() && (
+        isAdmin() ||
+        (resource.data.authorUid == request.auth.uid && request.resource.data.authorUid == resource.data.authorUid) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'dislikes'])
+      );
+      allow delete: if signedIn() && (
+        resource.data.authorUid == request.auth.uid
+        || isAdmin()
+        || isForumPostAuthor(resource.data.postId)
+      );
+    }
+
+    match /reclamations/{id} {
+      allow create: if signedIn()
+        && request.resource.data.authorUid == request.auth.uid;
+      allow read: if signedIn() && (resource.data.authorUid == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    match /marketplaceProducts/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.sellerUid == request.auth.uid;
+      allow update, delete: if signedIn() && resource.data.sellerUid == request.auth.uid;
+    }
+
+    match /marketplaceMessages/{id} {
+      /**
+       * Lecture : tout utilisateur connecté pour un `productId` dont la fiche produit existe encore.
+       * (Sinon une requête `where productId == …` échoue entièrement : l’acheteur ne peut pas lire les réponses du vendeur
+       * si la règle n’autorise que sender OU seller par message.)
+       * Limite : les messages d’un même produit sont visibles par tous les comptes connectés qui ouvrent le fil.
+       */
+      allow read: if signedIn()
+        && resource.data.productId is string
+        && exists(/databases/$(database)/documents/marketplaceProducts/$(resource.data.productId));
+      /** Création : authentifié, expéditeur = soi, texte borné, produit existe, pas message « vers soi-même ». */
+      allow create: if signedIn()
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.productId is string
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 2000
+        && request.resource.data.senderEmail is string
+        && exists(/databases/$(database)/documents/marketplaceProducts/$(request.resource.data.productId))
+        && get(/databases/$(database)/documents/marketplaceProducts/$(request.resource.data.productId)).data.sellerUid != request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /installationRequests/{id} {
+      allow create: if true; // Unauthenticated users can submit requests
+      allow read, update, delete: if isAdmin();
+    }
+  }
+}
