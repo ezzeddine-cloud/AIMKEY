@@ -75,8 +75,13 @@ export function FarmerSoilSensorView({ t }: { t: (fr: string, ar: string) => str
   /* ── Chart.js ── */
   useEffect(() => {
     if (!chartRef.current || !history) return;
+    let destroyed = false;
+
     const loadChart = async () => {
       const { Chart, LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Legend, Tooltip } = await import("chart.js");
+      
+      if (destroyed || !chartRef.current) return;
+      
       Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Legend, Tooltip);
 
       if (chartInstanceRef.current) {
@@ -87,47 +92,55 @@ export function FarmerSoilSensorView({ t }: { t: (fr: string, ar: string) => str
         return;
       }
 
-      chartInstanceRef.current = new Chart(chartRef.current!, {
-        type: "line",
-        data: {
-          labels: history.heures,
-          datasets: [
-            {
-              label: "Humidité %",
-              data: history.humidites,
-              borderColor: "#10b981",
-              backgroundColor: "rgba(16,185,129,0.08)",
-              fill: true,
-              tension: 0.4,
-              pointRadius: 2,
-            },
-            {
-              label: "Seuil Irrigation",
-              data: history.humidites.map(() => 40),
-              borderColor: "#ef4444",
-              borderDash: [6, 4],
-              pointRadius: 0,
-              fill: false,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: { min: 0, max: 100, grid: { color: "rgba(0,0,0,0.04)" }, ticks: { color: "#a1a1aa" } },
-            x: { grid: { color: "rgba(0,0,0,0.02)" }, ticks: { color: "#a1a1aa", maxTicksLimit: 10 } },
+      try {
+        chartInstanceRef.current = new Chart(chartRef.current, {
+          type: "line",
+          data: {
+            labels: history.heures,
+            datasets: [
+              {
+                label: "Humidité %",
+                data: history.humidites,
+                borderColor: "#10b981",
+                backgroundColor: "rgba(16,185,129,0.08)",
+                fill: true,
+                tension: 0.4,
+                pointRadius: 2,
+              },
+              {
+                label: "Seuil Irrigation",
+                data: history.humidites.map(() => 40),
+                borderColor: "#ef4444",
+                borderDash: [6, 4],
+                pointRadius: 0,
+                fill: false,
+              },
+            ],
           },
-          plugins: { legend: { labels: { color: "#71717a" } } },
-        },
-      });
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: { min: 0, max: 100, grid: { color: "rgba(0,0,0,0.04)" }, ticks: { color: "#a1a1aa" } },
+              x: { grid: { color: "rgba(0,0,0,0.02)" }, ticks: { color: "#a1a1aa", maxTicksLimit: 10 } },
+            },
+            plugins: { legend: { labels: { color: "#71717a" } } },
+          },
+        });
+      } catch (err) {
+        console.error("Failed to create chart:", err);
+      }
     };
     loadChart();
-  }, [history]);
 
-  useEffect(() => {
-    return () => { if (chartInstanceRef.current) { chartInstanceRef.current.destroy(); chartInstanceRef.current = null; } };
-  }, []);
+    return () => {
+      destroyed = true;
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.destroy();
+        chartInstanceRef.current = null;
+      }
+    };
+  }, [history]);
 
   /* ── Score helpers ── */
   const scoreColor = (s: number) => {
