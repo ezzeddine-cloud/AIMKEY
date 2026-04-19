@@ -67,6 +67,24 @@
 
 ---
 
+## 📊 Datasets & External Resources
+
+The platform leverages the following publicly available datasets and hardware documentation to power its AI models and IoT systems:
+
+### 🌫️ Air Quality Dataset
+- **Source**: [Kaggle – Air Quality Data Set](https://www.kaggle.com/datasets/fedesoriano/air-quality-data-set)
+- **Usage**: Used to train and validate the pollution heatmap models, correlating PM2.5 readings with environmental variables across time.
+
+### 🌤️ Weather Data
+- **Source**: [Kaggle – Weather Data](https://www.kaggle.com/datasets/bhanupratapbiswas/weather-data)
+- **Usage**: Provides historical weather patterns (temperature, humidity, precipitation) to improve the accuracy of AI irrigation predictions and crop health recommendations.
+
+### 🔌 Microcontroller Documentation – PIC16F77A
+- **Source**: [Microchip Technology – PIC16F77A Datasheet (PDF)](https://ww1.microchip.com/downloads/en/devicedoc/39582c.pdf)
+- **Usage**: Reference documentation for the PIC16F77A microcontroller used in the IoT sensor nodes. Covers ADC configuration, I/O port setup, and communication protocols (SPI/I2C) relevant to our soil moisture and temperature sensor integration.
+
+---
+
 ## 📸 Project Gallery
 
 *The platform features a custom-designed logo representing a technology-integrated palm tree supported by the hand of the community.*
@@ -74,7 +92,9 @@
 ---
 
 ## 🏆 Hackathon Project
-Developed with ❤️ for the **AIMKEY Hackathon**. 
+
+Developed with ❤️ for the **AIMKEY Hackathon**.
+
 **Gabes bin ydik** aims to preserve the heritage of our oases while embracing the future of smart cities.
 
 © 2026 Smart City Gabes Team.
