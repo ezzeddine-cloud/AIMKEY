@@ -52,7 +52,7 @@ export function OpenDataStatsModal({ t, isOpen, onClose }: OpenDataStatsModalPro
 
     return {
       count: records.length,
-      avgPm25: records.length ? (totalPm25 / records.length).toFixed(1) : 0,
+      avgPm25: records.length ? (totalPm25 / records.length).toFixed(1) : "0",
       levels
     };
   }, [pollutionData]);
