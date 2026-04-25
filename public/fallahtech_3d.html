@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FallahTech — Smart Farm Visualization</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body { background: linear-gradient(170deg, #020d1e 0%, #041a35 60%, #071f2e 100%); }
+canvas { display: block; }
+
+#ui {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  font-family: 'Courier New', monospace;
+}
+
+/* ── TITLE + CLOCK ── */
+#title {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  text-align: center; white-space: nowrap;
+}
+#title h1 {
+  color: #00e8ff; font-size: 1.2rem; font-weight: 400;
+  letter-spacing: 8px; text-transform: uppercase;
+  text-shadow: 0 0 24px rgba(0,232,255,0.6), 0 0 60px rgba(0,232,255,0.2);
+}
+#title p {
+  color: rgba(0,232,255,0.4); font-size: 0.55rem;
+  letter-spacing: 3px; margin-top: 3px;
+}
+#clock {
+  color: #ffcc00; font-size: 0.7rem; letter-spacing: 2px; margin-top: 5px;
+  text-shadow: 0 0 10px rgba(255,204,0,0.4);
+}
+
+/* ── PANELS ── */
+.panel {
+  background: rgba(2, 12, 30, 0.9);
+  border: 1px solid rgba(0,232,255,0.18);
+  border-radius: 3px;
+  padding: 10px 12px;
+  backdrop-filter: blur(12px);
+}
+.panel-title {
+  color: rgba(0,232,255,0.5); font-size: 0.52rem;
+  letter-spacing: 3px; text-transform: uppercase;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(0,232,255,0.1);
+  padding-bottom: 5px;
+}
+
+/* ── SENSOR PANEL (left) ── */
+#sensor-panel {
+  position: absolute; top: 60px; left: 10px; width: 220px;
+}
+.crop-section { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(0,232,255,0.06); }
+.crop-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.crop-header {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 5px;
+}
+.crop-emoji { font-size: 0.75rem; }
+.crop-name { color: rgba(255,255,255,0.7); font-size: 0.58rem; font-weight: bold; }
+.crop-row-tag {
+  font-size: 0.45rem; color: rgba(0,232,255,0.4); letter-spacing: 1px;
+  margin-left: auto;
+}
+
+.s-row { display: flex; align-items: center; gap: 5px; margin: 3px 0; }
+.s-led {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  transition: background 0.5s, box-shadow 0.5s;
+}
+.s-led.green  { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+.s-led.yellow { background: #ffcc00; box-shadow: 0 0 6px #ffcc00; }
+.s-led.red    { background: #ff3333; box-shadow: 0 0 8px #ff3333; }
+.s-led.blue   { background: #4499ff; box-shadow: 0 0 8px #4499ff; }
+.s-label { color: rgba(255,255,255,0.5); font-size: 0.55rem; flex: 1; }
+.s-bar-bg { width: 48px; height: 4px; background: rgba(255,255,255,0.06); border-radius: 2px; }
+.s-bar { height: 100%; border-radius: 2px; transition: width 0.8s ease, background 0.8s ease; }
+.s-val { color: #00e8ff; font-size: 0.58rem; width: 36px; text-align: right; }
+.s-status {
+  font-size: 0.5rem; letter-spacing: 1px; padding: 2px 6px;
+  border-radius: 2px; border: 1px solid; margin-top: 3px; display: inline-block;
+}
+.s-status.ok { color: #00ff88; border-color: rgba(0,255,136,0.3); background: rgba(0,255,136,0.05); }
+.s-status.low { color: #ff4444; border-color: rgba(255,68,68,0.3); background: rgba(255,68,68,0.06); }
+.s-status.watering { color: #4499ff; border-color: rgba(68,153,255,0.3); background: rgba(68,153,255,0.06); }
+.s-status.moderate { color: #ffcc00; border-color: rgba(255,204,0,0.3); background: rgba(255,204,0,0.05); }
+.s-status.rain-wait { color: #aa88ff; border-color: rgba(170,136,255,0.3); background: rgba(170,136,255,0.05); }
+
+/* ── WEATHER PANEL (right-top) ── */
+#weather-panel {
+  position: absolute; top: 60px; right: 10px; width: 225px;
+}
+.weather-current {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.weather-icon { font-size: 1.4rem; }
+.weather-info { flex: 1; }
+.weather-cond { color: rgba(255,255,255,0.7); font-size: 0.6rem; }
+.weather-temp { color: #ffcc00; font-size: 0.75rem; font-weight: bold; }
+.rain-bar-wrap {
+  display: flex; align-items: center; gap: 6px; margin-top: 6px;
+}
+.rain-label { color: rgba(255,255,255,0.4); font-size: 0.52rem; width: 32px; }
+.rain-bar-bg { flex: 1; height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; }
+.rain-bar { height: 100%; border-radius: 3px; transition: width 1s ease; background: linear-gradient(90deg, #4499ff, #aa66ff); }
+.rain-pct { color: #4499ff; font-size: 0.55rem; width: 28px; text-align: right; }
+.weather-forecast {
+  color: rgba(255,255,255,0.4); font-size: 0.5rem; margin-top: 6px;
+  line-height: 1.5; letter-spacing: 0.5px;
+}
+
+/* ── AI PANEL (right) ── */
+#ai-panel {
+  position: absolute; top: 225px; right: 10px; width: 225px;
+}
+.ai-row-status {
+  display: flex; align-items: center; gap: 5px; margin: 4px 0;
+  padding: 3px 6px; border-radius: 2px;
+  border: 1px solid rgba(0,232,255,0.06);
+  background: rgba(0,232,255,0.02);
+}
+.ai-row-label { color: rgba(255,255,255,0.5); font-size: 0.52rem; width: 22px; }
+.ai-row-crop { font-size: 0.6rem; width: 18px; }
+.ai-row-valve {
+  font-size: 0.48rem; letter-spacing: 1px; margin-left: auto;
+  padding: 1px 5px; border-radius: 2px;
+}
+.ai-row-valve.closed { color: #666; background: rgba(100,100,100,0.1); }
+.ai-row-valve.open { color: #4499ff; background: rgba(68,153,255,0.12); box-shadow: 0 0 6px rgba(68,153,255,0.2); }
+.ai-row-valve.rain { color: #aa88ff; background: rgba(170,136,255,0.1); }
+
+.pump-status {
+  margin-top: 8px; padding-top: 7px;
+  border-top: 1px solid rgba(0,232,255,0.08);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.pump-label { color: rgba(255,255,255,0.4); font-size: 0.52rem; }
+.pump-val { font-size: 0.55rem; letter-spacing: 1px; }
+.pump-val.off { color: #555; }
+.pump-val.on { color: #ff9900; text-shadow: 0 0 8px rgba(255,153,0,0.4); }
+
+/* ── AI LOG (right-bottom) ── */
+#ai-log-panel {
+  position: absolute; bottom: 60px; right: 10px; width: 225px;
+  max-height: 160px;
+}
+.ai-log-list { max-height: 110px; overflow: hidden; }
+.ai-log-entry {
+  font-size: 0.48rem; color: rgba(255,255,255,0.4); margin: 3px 0;
+  padding-left: 4px; border-left: 2px solid rgba(0,232,255,0.15);
+  line-height: 1.4;
+}
+.ai-log-entry .log-time { color: rgba(0,232,255,0.4); }
+.ai-log-entry.irrigate { border-left-color: #4499ff; }
+.ai-log-entry.alert { border-left-color: #ff4444; }
+.ai-log-entry.rain { border-left-color: #aa88ff; }
+.ai-log-entry.ok { border-left-color: #00ff88; }
+
+/* ── STATS (bottom-left) ── */
+#stats-panel {
+  position: absolute; bottom: 10px; left: 10px; width: 185px;
+}
+.kv { display: flex; justify-content: space-between; margin: 4px 0; }
+.kv-k { color: rgba(255,255,255,0.4); font-size: 0.52rem; }
+.kv-v { color: #00e8ff; font-size: 0.52rem; }
+
+/* ── LEGEND (bottom-center) ── */
+#legend {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+  padding: 7px 14px;
+  background: rgba(2,12,30,0.82);
+  border: 1px solid rgba(0,232,255,0.12);
+  border-radius: 2px;
+}
+.leg { display: flex; align-items: center; gap: 4px; }
+.leg-dot { width: 6px; height: 6px; border-radius: 50%; }
+.leg-txt { color: rgba(255,255,255,0.35); font-size: 0.5rem; letter-spacing: 1px; }
+
+#hint {
+  position: absolute; bottom: 42px; left: 50%; transform: translateX(-50%);
+  color: rgba(255,255,255,0.18); font-size: 0.5rem; letter-spacing: 2px;
+  text-align: center; white-space: nowrap;
+}
+
+/* Rain indicator overlay */
+#rain-overlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(180deg, rgba(100,130,180,0.06) 0%, transparent 40%);
+  opacity: 0; transition: opacity 2s ease;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<div id="ui">
+  <div id="rain-overlay"></div>
+
+  <div id="title">
+    <h1>FallahTech</h1>
+    <p>Smart Drip Irrigation — Gabès Field Architecture</p>
+    <div id="clock">☀ 08:00 — Day 1</div>
+  </div>
+
+  <!-- Left: Sensor Nodes per Crop Row -->
+  <div id="sensor-panel" class="panel">
+    <div class="panel-title">IoT Sensor Nodes</div>
+
+    <!-- Row 1: Date Palm -->
+    <div class="crop-section" id="crop0">
+      <div class="crop-header">
+        <span class="crop-emoji">🌴</span>
+        <span class="crop-name">Date Palm</span>
+        <span class="crop-row-tag">ROW 1</span>
+      </div>
+      <div class="s-row">
+        <div class="s-led green" id="led0"></div>
+        <div class="s-label">Humidity</div>
+        <div class="s-bar-bg"><div class="s-bar" id="bar0" style="width:72%;background:#00ff88"></div></div>
+        <div class="s-val" id="hum0">72%</div>
+      </div>
+      <div class="s-row">
+        <div class="s-label">Temp</div>
+        <div class="s-val" id="temp0">28.4°</div>
+      </div>
+      <div class="s-row">
+        <div class="s-label">Soil EC</div>
+        <div class="s-val" id="ec0">1.2 dS</div>
+      </div>
+      <div class="s-status ok" id="status0">✓ OK</div>
+    </div>
+
+    <!-- Row 2: Chili Pepper -->
+    <div class="crop-section" id="crop1">
+      <div class="crop-header">
+        <span class="crop-emoji">🌶️</span>
+        <span class="crop-name">Chili Pepper</span>
+        <span class="crop-row-tag">ROW 2</span>
+      </div>
+      <div class="s-row">
+        <div class="s-led yellow" id="led1"></div>
+        <div class="s-label">Humidity</div>
+        <div class="s-bar-bg"><div class="s-bar" id="bar1" style="width:55%;background:#ffcc00"></div></div>
+        <div class="s-val" id="hum1">55%</div>
+      </div>
+      <div class="s-row">
+        <div class="s-label">Temp</div>
+        <div class="s-val" id="temp1">29.1°</div>
+      </div>
+      <div class="s-row">
+        <div class="s-label">Soil EC</div>
+        <div class="s-val" id="ec1">1.3 dS</div>
+      </div>
+      <div class="s-status moderate" id="status1">~ MODERATE</div>
+    </div>
+
+    <!-- Row 3: Watermelon -->
+    <div class="crop-section" id="crop2">
+      <div class="crop-header">
+        <span class="crop-emoji">🍉</span>
+        <span class="crop-name">Watermelon</span>
+        <span class="crop-row-tag">ROW 3</span>
+      </div>
+      <div class="s-row">
+        <div class="s-led yellow" id="led2"></div>
+        <div class="s-label">Humidity</div>
+        <div class="s-bar-bg"><div class="s-bar" id="bar2" style="width:48%;background:#ffcc00"></div></div>
+        <div class="s-val" id="hum2">48%</div>
+      </div>
+      <div class="s-row">
+        <div class="s-label">Temp</div>
+        <div class="s-val" id="temp2">30.2°</div>
+      </div>
+      <div class="s-row">
+        <div class="s-label">Soil EC</div>
+        <div class="s-val" id="ec2">1.1 dS</div>
+      </div>
+      <div class="s-status moderate" id="status2">~ MODERATE</div>
+    </div>
+  </div>
+
+  <!-- Right Top: Weather -->
+  <div id="weather-panel" class="panel">
+    <div class="panel-title">Weather — Gabès</div>
+    <div class="weather-current">
+      <div class="weather-icon" id="w-icon">☀️</div>
+      <div class="weather-info">
+        <div class="weather-cond" id="w-cond">Clear Sky</div>
+        <div class="weather-temp" id="w-temp">28°C</div>
+      </div>
+    </div>
+    <div class="rain-bar-wrap">
+      <div class="rain-label">Rain</div>
+      <div class="rain-bar-bg"><div class="rain-bar" id="rain-bar" style="width:10%"></div></div>
+      <div class="rain-pct" id="rain-pct">10%</div>
+    </div>
+    <div class="weather-forecast" id="w-forecast">Next 2h: Clear skies · Wind 12 km/h NE</div>
+  </div>
+
+  <!-- Right: AI Decisions -->
+  <div id="ai-panel" class="panel">
+    <div class="panel-title">AI Decision Engine</div>
+    <div class="ai-row-status" id="ai-r0">
+      <div class="ai-row-label">R1</div>
+      <div class="ai-row-crop">🌴</div>
+      <div class="s-label" id="ai-desc0">Monitoring</div>
+      <div class="ai-row-valve closed" id="ai-valve0">CLOSED</div>
+    </div>
+    <div class="ai-row-status" id="ai-r1">
+      <div class="ai-row-label">R2</div>
+      <div class="ai-row-crop">🌶️</div>
+      <div class="s-label" id="ai-desc1">Monitoring</div>
+      <div class="ai-row-valve closed" id="ai-valve1">CLOSED</div>
+    </div>
+    <div class="ai-row-status" id="ai-r2">
+      <div class="ai-row-label">R3</div>
+      <div class="ai-row-crop">🍉</div>
+      <div class="s-label" id="ai-desc2">Monitoring</div>
+      <div class="ai-row-valve closed" id="ai-valve2">CLOSED</div>
+    </div>
+    <div class="pump-status">
+      <div class="pump-label">Pump Motor</div>
+      <div class="pump-val off" id="pump-status">OFF</div>
+    </div>
+    <div class="pump-status">
+      <div class="pump-label">Total Flow</div>
+      <div class="pump-val" id="total-flow" style="color:#4499ff">0 L/h</div>
+    </div>
+  </div>
+
+  <!-- Right Bottom: AI Log -->
+  <div id="ai-log-panel" class="panel">
+    <div class="panel-title">AI Activity Log</div>
+    <div class="ai-log-list" id="ai-log"></div>
+  </div>
+
+  <!-- Bottom Left: Stats -->
+  <div id="stats-panel" class="panel">
+    <div class="panel-title">Session Stats</div>
+    <div class="kv"><div class="kv-k">Water Saved</div><div class="kv-v" id="water-saved">0.0 L</div></div>
+    <div class="kv"><div class="kv-k">Irrigation Cycles</div><div class="kv-v" id="total-cycles">R1:0 R2:0 R3:0</div></div>
+    <div class="kv"><div class="kv-k">Rain Events</div><div class="kv-v" id="rain-events">0</div></div>
+    <div class="kv"><div class="kv-k">Sim Runtime</div><div class="kv-v" id="runtime">0m 0s</div></div>
+  </div>
+
+  <!-- Legend -->
+  <div id="legend">
+    <div class="leg"><div class="leg-dot" style="background:#00e8ff;box-shadow:0 0 5px #00e8ff"></div><div class="leg-txt">IoT Signal</div></div>
+    <div class="leg"><div class="leg-dot" style="background:#00ff88;box-shadow:0 0 5px #00ff88"></div><div class="leg-txt">Soil OK</div></div>
+    <div class="leg"><div class="leg-dot" style="background:#ff3333;box-shadow:0 0 5px #ff3333"></div><div class="leg-txt">Dry Alert</div></div>
+    <div class="leg"><div class="leg-dot" style="background:#4499ff;box-shadow:0 0 5px #4499ff"></div><div class="leg-txt">Water Flow</div></div>
+    <div class="leg"><div class="leg-dot" style="background:#ff9900;box-shadow:0 0 5px #ff9900"></div><div class="leg-txt">Motor</div></div>
+    <div class="leg"><div class="leg-dot" style="background:#aa88ff;box-shadow:0 0 5px #aa88ff"></div><div class="leg-txt">Rain</div></div>
+  </div>
+
+  <div id="hint">drag to rotate · simulation runs continuously · each crop dries at its own rate</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// =============================================================
+// CROP PROFILES (agricultural science)
+// =============================================================
+const CROPS = [
+  {
+    name: 'Date Palm', emoji: '🌴',
+    dryRate: 0.35,        // humidity % lost per second at ideal temp (slow — deep roots)
+    threshold: 35,         // irrigate below this %
+    target: 75,            // stop irrigating at this %
+    fillRate: 2.0,         // % per second when irrigated
+    idealTemp: 32,         // optimal temperature for this crop
+    tempCoeff: 0.025,      // how much temp deviation speeds drying
+    ecBase: 1.2,           // baseline soil EC
+  },
+  {
+    name: 'Chili Pepper', emoji: '🌶️',
+    dryRate: 0.65,         // medium consumption
+    threshold: 40,
+    target: 70,
+    fillRate: 2.5,
+    idealTemp: 28,
+    tempCoeff: 0.04,
+    ecBase: 1.3,
+  },
+  {
+    name: 'Watermelon', emoji: '🍉',
+    dryRate: 1.1,          // fast consumption — large fruits need water
+    threshold: 45,
+    target: 80,
+    fillRate: 3.0,
+    idealTemp: 30,
+    tempCoeff: 0.05,
+    ecBase: 1.1,
+  },
+];
+
+// =============================================================
+// SIMULATION STATE
+// =============================================================
+const sim = {
+  rows: [
+    { humidity: 72, temp: 28.4, ec: 1.2, irrigating: false, valveOpen: false, cycles: 0 },
+    { humidity: 55, temp: 29.1, ec: 1.3, irrigating: false, valveOpen: false, cycles: 0 },
+    { humidity: 48, temp: 30.2, ec: 1.1, irrigating: false, valveOpen: false, cycles: 0 },
+  ],
+  weather: {
+    condition: 'CLEAR',    // CLEAR, CLOUDY, RAIN
+    rainChance: 10,
+    isRaining: false,
+    nextChange: 35,        // seconds until next weather change
+    rainForecast: false,   // is rain coming in next period?
+  },
+  clock: { elapsed: 0, simHour: 8, simMinute: 0, day: 1 },
+  waterSaved: 0,
+  rainEvents: 0,
+  pumpActive: false,
+  aiLog: [],
+};
+
+let lastTime = Date.now();
+
+// =============================================================
+// RENDERER + SCENE
+// =============================================================
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x020c1e, 0.012);
+const baseFogColor = new THREE.Color(0x020c1e);
+const rainFogColor = new THREE.Color(0x1a2a3a);
+
+const camera = new THREE.PerspectiveCamera(52, window.innerWidth / window.innerHeight, 0.1, 300);
+camera.position.set(24, 17, 24);
+camera.lookAt(0, 1, 0);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// =============================================================
+// LIGHTS
+// =============================================================
+const ambientLight = new THREE.AmbientLight(0x0a1e3a, 1.2);
+scene.add(ambientLight);
+
+const sun = new THREE.DirectionalLight(0xfff4dd, 2.0);
+sun.position.set(18, 30, 12);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 100;
+sun.shadow.camera.left = -22;
+sun.shadow.camera.right = 22;
+sun.shadow.camera.top = 22;
+sun.shadow.camera.bottom = -22;
+scene.add(sun);
+
+const fillLight = new THREE.DirectionalLight(0x204080, 0.5);
+fillLight.position.set(-12, 8, -15);
+scene.add(fillLight);
+scene.add(new THREE.HemisphereLight(0x1a3a6a, 0x0a1a0a, 0.6));
+
+// =============================================================
+// MATERIALS
+// =============================================================
+const mat = {
+  ground:   new THREE.MeshLambertMaterial({ color: 0x2a6030 }),
+  soil:     new THREE.MeshLambertMaterial({ color: 0x6b4c22 }),
+  trunk:    new THREE.MeshLambertMaterial({ color: 0x7a5820 }),
+  leaf:     new THREE.MeshLambertMaterial({ color: 0x2a7c44 }),
+  leaf2:    new THREE.MeshLambertMaterial({ color: 0x3aaa5e }),
+  date:     new THREE.MeshLambertMaterial({ color: 0xcc7700 }),
+  pepper:   new THREE.MeshLambertMaterial({ color: 0xcc2200 }),
+  pepperLeaf: new THREE.MeshLambertMaterial({ color: 0x3a8a2e }),
+  melonFruit: new THREE.MeshLambertMaterial({ color: 0x2a6e2a }),
+  melonLeaf: new THREE.MeshLambertMaterial({ color: 0x338833 }),
+  melonVine: new THREE.MeshLambertMaterial({ color: 0x2a6a25 }),
+  pipe:     new THREE.MeshPhongMaterial({ color: 0x7a9ab0, shininess: 55 }),
+  node:     new THREE.MeshPhongMaterial({ color: 0x1e2530, shininess: 40 }),
+  nodeCap:  new THREE.MeshPhongMaterial({ color: 0x1a3555, shininess: 80 }),
+  concrete: new THREE.MeshLambertMaterial({ color: 0x9aaa99 }),
+  metal:    new THREE.MeshPhongMaterial({ color: 0x445566, shininess: 70 }),
+  handle:   new THREE.MeshPhongMaterial({ color: 0xcc6600, shininess: 90 }),
+  tower:    new THREE.MeshPhongMaterial({ color: 0x1a3a5a, shininess: 50 }),
+  probe:    new THREE.MeshPhongMaterial({ color: 0xaabbcc, shininess: 80 }),
+  valve:    new THREE.MeshPhongMaterial({ color: 0x334455, shininess: 60 }),
+};
+
+const rowPipeMats = [mat.pipe.clone(), mat.pipe.clone(), mat.pipe.clone()];
+const mainPipeMat = mat.pipe.clone();
+const motorBoxMat = mat.tower.clone();
+
+// =============================================================
+// GROUND
+// =============================================================
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(50, 45), mat.ground);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Soil strips — different color hints per crop type
+const ROWS_X = [-5, 0, 5];
+const soilColors = [0x6b4c22, 0x5a3a1a, 0x4a3515];
+ROWS_X.forEach((x, i) => {
+  const s = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 16), new THREE.MeshLambertMaterial({ color: soilColors[i] }));
+  s.rotation.x = -Math.PI / 2;
+  s.position.set(x, 0.005, 0);
+  s.receiveShadow = true;
+  scene.add(s);
+});
+
+// Border walls
+const borderMat = new THREE.MeshLambertMaterial({ color: 0x557755 });
+[[0,0.08,-8.5,22,0.16,0.3],[0,0.08,8.5,22,0.16,0.3],[-11,0.08,0,0.3,0.16,17],[11,0.08,0,0.3,0.16,17]].forEach(([x,y,z,w,h,d]) => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), borderMat);
+  m.position.set(x,y,z); m.receiveShadow = true;
+  scene.add(m);
+});
+
+// =============================================================
+// PLANTS — Row 1: Date Palms
+// =============================================================
+const PLANTS_Z = [-6.5, -4, -1.5, 1, 3.5, 6];
+
+function createPalm(wx, wz) {
+  const g = new THREE.Group();
+  const H = 2.4 + Math.random() * 0.6;
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.13, H, 7), mat.trunk);
+  trunk.position.y = H / 2; trunk.castShadow = true;
+  g.add(trunk);
+  const fol = new THREE.Mesh(new THREE.SphereGeometry(0.5, 8, 6), Math.random() > 0.5 ? mat.leaf : mat.leaf2);
+  fol.position.y = H + 0.25; fol.scale.set(1, 0.65, 1); fol.castShadow = true;
+  g.add(fol);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    const f = new THREE.Mesh(new THREE.SphereGeometry(0.22, 6, 4), Math.random() > 0.5 ? mat.leaf : mat.leaf2);
+    f.position.set(Math.cos(a)*0.48, H+Math.random()*0.2, Math.sin(a)*0.48);
+    f.scale.set(1, 0.5, 1); f.castShadow = true;
+    g.add(f);
+  }
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + 0.4;
+    const d = new THREE.Mesh(new THREE.SphereGeometry(0.07, 5, 3), mat.date);
+    d.position.set(Math.cos(a)*0.28, H-0.05, Math.sin(a)*0.28);
+    g.add(d);
+  }
+  g.position.set(wx + (Math.random()-0.5)*0.25, 0, wz + (Math.random()-0.5)*0.25);
+  return g;
+}
+
+// =============================================================
+// PLANTS — Row 2: Chili Peppers
+// =============================================================
+function createPepper(wx, wz) {
+  const g = new THREE.Group();
+  const H = 0.7 + Math.random() * 0.3;
+  // Stem
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.04, H, 6), mat.pepperLeaf);
+  stem.position.y = H / 2; stem.castShadow = true;
+  g.add(stem);
+  // Foliage clusters
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const lf = new THREE.Mesh(new THREE.SphereGeometry(0.15 + Math.random()*0.06, 6, 4), mat.pepperLeaf);
+    lf.position.set(Math.cos(a)*0.13, H*0.6 + Math.random()*0.2, Math.sin(a)*0.13);
+    lf.scale.set(1, 0.45, 0.7); lf.castShadow = true;
+    g.add(lf);
+  }
+  // Chili fruits
+  for (let i = 0; i < 3 + Math.floor(Math.random()*2); i++) {
+    const a = (i / 4) * Math.PI * 2 + Math.random();
+    const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.035, 0.12, 5), mat.pepper);
+    ch.position.set(Math.cos(a)*0.1, H*0.35 + i*0.06, Math.sin(a)*0.1);
+    ch.rotation.z = (Math.random()-0.5)*0.8;
+    ch.rotation.x = (Math.random()-0.5)*0.3;
+    g.add(ch);
+  }
+  g.position.set(wx + (Math.random()-0.5)*0.2, 0, wz + (Math.random()-0.5)*0.2);
+  return g;
+}
+
+// =============================================================
+// PLANTS — Row 3: Watermelon
+// =============================================================
+function createMelon(wx, wz) {
+  const g = new THREE.Group();
+  // Low vine
+  const vine = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.7 + Math.random()*0.4, 5), mat.melonVine);
+  vine.rotation.z = Math.PI / 2;
+  vine.position.set(0, 0.04, 0); vine.castShadow = true;
+  g.add(vine);
+  // Cross vine
+  const vine2 = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.4, 4), mat.melonVine);
+  vine2.rotation.x = Math.PI / 2;
+  vine2.position.set((Math.random()-0.5)*0.15, 0.04, 0);
+  g.add(vine2);
+  // Leaves (broad, flat)
+  for (let i = 0; i < 4; i++) {
+    const lf = new THREE.Mesh(new THREE.SphereGeometry(0.13 + Math.random()*0.05, 6, 4), mat.melonLeaf);
+    lf.position.set((Math.random()-0.5)*0.35, 0.06, (Math.random()-0.5)*0.25);
+    lf.scale.set(1.2, 0.25, 1); lf.castShadow = true;
+    g.add(lf);
+  }
+  // Watermelon fruit (60% chance)
+  if (Math.random() > 0.4) {
+    const mel = new THREE.Mesh(new THREE.SphereGeometry(0.16 + Math.random()*0.06, 8, 6), mat.melonFruit);
+    mel.position.set((Math.random()-0.5)*0.15, 0.12, (Math.random()-0.5)*0.12);
+    mel.scale.set(1.3, 0.8, 0.95);
+    // Stripe
+    const stripe = new THREE.Mesh(new THREE.SphereGeometry(0.165, 8, 6),
+      new THREE.MeshLambertMaterial({ color: 0x1a5a1a }));
+    stripe.position.copy(mel.position);
+    stripe.scale.set(1.15, 0.5, 0.7);
+    g.add(stripe);
+    g.add(mel);
+  }
+  g.position.set(wx + (Math.random()-0.5)*0.2, 0, wz + (Math.random()-0.5)*0.15);
+  return g;
+}
+
+// Place all plants
+PLANTS_Z.forEach(rz => scene.add(createPalm(-5, rz)));
+PLANTS_Z.forEach(rz => scene.add(createPepper(0, rz)));
+PLANTS_Z.forEach(rz => scene.add(createMelon(5, rz)));
+
+// =============================================================
+// DRIP IRRIGATION PIPES
+// =============================================================
+const mainPipeGeo = new THREE.CylinderGeometry(0.055, 0.055, 23, 8);
+mainPipeGeo.rotateZ(Math.PI / 2);
+const mainPipe = new THREE.Mesh(mainPipeGeo, mainPipeMat);
+mainPipe.position.set(-0.5, 0.07, -8);
+mainPipe.castShadow = true;
+scene.add(mainPipe);
+
+const rowPipes = [];
+ROWS_X.forEach((rx, i) => {
+  const geo = new THREE.CylinderGeometry(0.038, 0.038, 16, 8);
+  const rp = new THREE.Mesh(geo, rowPipeMats[i]);
+  rp.position.set(rx, 0.07, 0);
+  rp.castShadow = true;
+  scene.add(rp);
+  rowPipes.push(rp);
+});
+
+// Solenoid valves at T-junctions (per-row independent control)
+const valveLedMats = [];
+const valveGlowLights = [];
+ROWS_X.forEach((rx, i) => {
+  const vg = new THREE.Group();
+  // Valve body
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.14, 0.14), mat.valve);
+  body.castShadow = true;
+  vg.add(body);
+  // Coil housing
+  const coil = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.1, 8), mat.metal);
+  coil.position.y = 0.1;
+  vg.add(coil);
+  // LED indicator
+  const ledMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.028, 6, 4), ledMat);
+  led.position.set(0, 0.16, 0);
+  vg.add(led);
+  valveLedMats.push(ledMat);
+  // Glow light
+  const gl = new THREE.PointLight(0x4499ff, 0, 1.2);
+  gl.position.set(0, 0.18, 0);
+  vg.add(gl);
+  valveGlowLights.push(gl);
+  // Label plate
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.02),
+    new THREE.MeshBasicMaterial({ color: 0x0a1520 }));
+  plate.position.set(0, 0, 0.08);
+  vg.add(plate);
+
+  vg.position.set(rx, 0.12, -8);
+  scene.add(vg);
+});
+
+// Drip emitters at each plant
+ROWS_X.forEach(rx => {
+  PLANTS_Z.forEach(rz => {
+    const e = new THREE.Mesh(
+      new THREE.SphereGeometry(0.055, 6, 4),
+      new THREE.MeshPhongMaterial({ color: 0x4477aa, shininess: 60 })
+    );
+    e.position.set(rx, 0.075, rz);
+    scene.add(e);
+  });
+});
+
+// =============================================================
+// SENSOR NODES (one per row)
+// =============================================================
+const NODE_POSITIONS = [
+  { x: -5 + 0.75, z: -1.8, row: 0 },
+  { x:  0 + 0.75, z:  2.2, row: 1 },
+  { x:  5 + 0.75, z: -3.5, row: 2 },
+];
+
+const nodeLedMats = NODE_POSITIONS.map(() => new THREE.MeshBasicMaterial({ color: 0x00ff88 }));
+const nodeLedLights = [];
+
+NODE_POSITIONS.forEach((pos, i) => {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.42, 0.26), mat.node);
+  body.position.y = 0.14; body.castShadow = true;
+  g.add(body);
+  const cap = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.045, 0.28), mat.nodeCap);
+  cap.position.y = 0.37;
+  g.add(cap);
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 6), nodeLedMats[i]);
+  led.position.set(0.1, 0.4, 0);
+  g.add(led);
+  const ll = new THREE.PointLight(0x00ff88, 0.5, 0.9);
+  ll.position.set(0.1, 0.44, 0);
+  g.add(ll);
+  nodeLedLights.push(ll);
+  const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.52, 6), mat.probe);
+  ant.position.set(-0.09, 0.64, 0);
+  g.add(ant);
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.023, 6, 4), new THREE.MeshBasicMaterial({ color: 0x00e8ff }));
+  tip.position.set(-0.09, 0.91, 0);
+  g.add(tip);
+  [-0.07, 0.07].forEach(ox => {
+    const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.008, 0.38, 6), mat.probe);
+    pin.position.set(ox, -0.1, 0);
+    g.add(pin);
+  });
+  for (let s = 0; s < 3; s++) {
+    const slot = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.012, 0.04), new THREE.MeshBasicMaterial({ color: 0x0a0f16 }));
+    slot.position.set(0, 0.18 + s * 0.06, 0.135);
+    g.add(slot);
+  }
+  g.position.set(pos.x, 0, pos.z);
+  scene.add(g);
+});
+
+// =============================================================
+// WELL + MOTOR ASSEMBLY
+// =============================================================
+const wellGroup = new THREE.Group();
+const wellBase = new THREE.Mesh(new THREE.CylinderGeometry(0.72, 0.8, 0.55, 12), mat.concrete);
+wellBase.position.set(0, 0.28, 0); wellBase.castShadow = true;
+wellGroup.add(wellBase);
+const voidM = new THREE.MeshBasicMaterial({ color: 0x050a0f, side: THREE.BackSide });
+const wellVoid = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 0.8, 12, 1, true), voidM);
+wellVoid.position.set(0, 0.38, 0);
+wellGroup.add(wellVoid);
+const rim = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.065, 8, 24), mat.concrete);
+rim.rotation.x = Math.PI / 2; rim.position.y = 0.57;
+wellGroup.add(rim);
+const vPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.8, 8), mat.pipe.clone());
+vPipe.position.set(0.78, 0.75, 0);
+wellGroup.add(vPipe);
+const hPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 1.4, 8), mat.pipe.clone());
+hPipe.rotation.z = Math.PI / 2; hPipe.position.set(1.5, 0.36, 0);
+wellGroup.add(hPipe);
+const motorBox = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.38, 0.38), motorBoxMat);
+motorBox.position.set(0.78, 1.28, 0); motorBox.castShadow = true;
+wellGroup.add(motorBox);
+const plate = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.18, 0.04),
+  new THREE.MeshPhongMaterial({ color: 0x0a1a2a, shininess: 100 }));
+plate.position.set(0.78, 1.28, 0.2);
+wellGroup.add(plate);
+const motorLedMat = new THREE.MeshBasicMaterial({ color: 0x223344 });
+const motorLed = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), motorLedMat);
+motorLed.position.set(1.02, 1.35, 0.2);
+wellGroup.add(motorLed);
+const handleGroup = new THREE.Group();
+const handleBar = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.5, 8), mat.handle);
+handleBar.rotation.z = Math.PI / 2;
+handleGroup.add(handleBar);
+const handleCross = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.35, 8), mat.handle);
+handleGroup.add(handleCross);
+handleGroup.position.set(0.78, 1.03, 0);
+wellGroup.add(handleGroup);
+wellGroup.position.set(-13.5, 0, -8);
+scene.add(wellGroup);
+
+const wcPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.9, 8), mat.pipe.clone());
+wcPipe.rotation.z = Math.PI / 2; wcPipe.position.set(-12.7, 0.07, -8);
+scene.add(wcPipe);
+
+const motorGlow = new THREE.PointLight(0xff6600, 0, 1.8);
+motorGlow.position.set(-12.72, 1.3, -8);
+scene.add(motorGlow);
+
+// Well water surface
+const wellWaterMat = new THREE.MeshBasicMaterial({ color: 0x1155aa, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
+const wellWater = new THREE.Mesh(new THREE.CircleGeometry(0.48, 16), wellWaterMat);
+wellWater.rotation.x = -Math.PI / 2; wellWater.position.set(-13.5, 0.15, -8);
+scene.add(wellWater);
+const wellGlow = new THREE.PointLight(0x2266cc, 0, 2.5);
+wellGlow.position.set(-13.5, 0.3, -8);
+scene.add(wellGlow);
+
+// =============================================================
+// IoT GATEWAY TOWER
+// =============================================================
+const gwGroup = new THREE.Group();
+const gwBase = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.1, 8), new THREE.MeshLambertMaterial({ color: 0x334455 }));
+gwBase.position.set(0, 0.05, 0);
+gwGroup.add(gwBase);
+const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.09, 3.8, 8), mat.tower);
+post.position.y = 1.9; post.castShadow = true;
+gwGroup.add(post);
+[0.3, 0.9, 1.5].forEach(y => {
+  const cs = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.7, 6), mat.tower);
+  cs.rotation.z = Math.PI / 2; cs.position.y = y;
+  gwGroup.add(cs);
+});
+const gwBox = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.44, 0.28), mat.tower.clone());
+gwBox.position.y = 3.8; gwBox.castShadow = true;
+gwGroup.add(gwBox);
+const screen = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.04), new THREE.MeshBasicMaterial({ color: 0x001a33 }));
+screen.position.set(0, 3.8, 0.15);
+gwGroup.add(screen);
+const gwAnt = new THREE.Mesh(new THREE.CylinderGeometry(0.013, 0.013, 0.75, 6), mat.probe);
+gwAnt.position.set(0.15, 4.25, 0);
+gwGroup.add(gwAnt);
+const gwTipMat = new THREE.MeshBasicMaterial({ color: 0x00e8ff });
+const gwTip = new THREE.Mesh(new THREE.SphereGeometry(0.028, 6, 4), gwTipMat);
+gwTip.position.set(0.15, 4.64, 0);
+gwGroup.add(gwTip);
+const gwGlow = new THREE.PointLight(0x00e8ff, 0.8, 4.5);
+gwGlow.position.set(0, 4.0, 0);
+gwGroup.add(gwGlow);
+gwGroup.position.set(13, 0, 0);
+scene.add(gwGroup);
+
+// =============================================================
+// STARS + MOON + CLOUDS
+// =============================================================
+const starGeo = new THREE.BufferGeometry();
+const starPos = [];
+for (let i = 0; i < 800; i++) starPos.push((Math.random()-0.5)*250, 18+Math.random()*100, (Math.random()-0.5)*250);
+starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
+const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.18, transparent: true, opacity: 0.65 });
+scene.add(new THREE.Points(starGeo, starMat));
+
+const moon = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 10), new THREE.MeshBasicMaterial({ color: 0xddddcc }));
+moon.position.set(40, 55, -70);
+scene.add(moon);
+const moonGlow = new THREE.PointLight(0xfff9e0, 0.3, 200);
+moonGlow.position.copy(moon.position);
+scene.add(moonGlow);
+
+// Clouds (appear during rain)
+const clouds = [];
+for (let i = 0; i < 6; i++) {
+  const cg = new THREE.Group();
+  const puffMats = [];
+  for (let j = 0; j < 4 + Math.floor(Math.random()*3); j++) {
+    const pm = new THREE.MeshBasicMaterial({ color: 0x556677, transparent: true, opacity: 0 });
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(1.8 + Math.random()*2.5, 7, 5), pm);
+    puff.position.set((Math.random()-0.5)*4, Math.random()*0.8, (Math.random()-0.5)*3);
+    cg.add(puff);
+    puffMats.push(pm);
+  }
+  cg.position.set((Math.random()-0.5)*35, 16 + Math.random()*4, (Math.random()-0.5)*25);
+  scene.add(cg);
+  clouds.push({ group: cg, mats: puffMats, targetOpacity: 0 });
+}
+
+// =============================================================
+// PARTICLE POOLS
+// =============================================================
+// Signal rings
+const RING_COUNT = 30;
+const ringPool = [];
+for (let i = 0; i < RING_COUNT; i++) {
+  const geo = new THREE.TorusGeometry(0.18, 0.018, 6, 28);
+  const m = new THREE.MeshBasicMaterial({ color: 0x00e8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  const mesh = new THREE.Mesh(geo, m);
+  mesh.rotation.x = Math.PI / 2;
+  mesh.visible = false;
+  scene.add(mesh);
+  ringPool.push({ mesh, active: false, t: 0, speed: 0.01, color: 0x00e8ff });
+}
+function spawnRing(x, y, z, color, speed) {
+  const r = ringPool.find(r => !r.active);
+  if (!r) return;
+  r.active = true; r.t = 0; r.speed = speed; r.color = color;
+  r.mesh.position.set(x, y, z);
+  r.mesh.material.color.setHex(color);
+  r.mesh.material.opacity = 0.85;
+  r.mesh.scale.set(0.1, 1, 0.1);
+  r.mesh.visible = true;
+}
+
+// Data packets (node → gateway arcs)
+const PKT_COUNT = 16;
+const pktPool = [];
+for (let i = 0; i < PKT_COUNT; i++) {
+  const m = new THREE.MeshBasicMaterial({ color: 0x00e8ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 4), m);
+  mesh.visible = false;
+  scene.add(mesh);
+  pktPool.push({ mesh, active: false, t: 0, speed: 0.007, nodeIdx: 0 });
+}
+function spawnPacket(nodeIdx) {
+  const p = pktPool.find(p => !p.active);
+  if (!p) return;
+  p.active = true; p.t = 0; p.speed = 0.006 + Math.random()*0.004; p.nodeIdx = nodeIdx;
+  p.mesh.visible = true; p.mesh.material.opacity = 0.95;
+}
+
+// Water drops
+const DROP_COUNT = 120;
+const dropPool = [];
+for (let i = 0; i < DROP_COUNT; i++) {
+  const m = new THREE.MeshBasicMaterial({ color: 0x44bbff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.045, 6, 5), m);
+  mesh.visible = false;
+  scene.add(mesh);
+  dropPool.push({ mesh, active: false, x:0, y:0, z:0, vy:0, life:0 });
+}
+function spawnDrop(x, z) {
+  const d = dropPool.find(d => !d.active);
+  if (!d) return;
+  d.active = true;
+  d.x = x + (Math.random()-0.5)*0.22;
+  d.z = z + (Math.random()-0.5)*0.22;
+  d.y = 0.12; d.vy = -0.008 - Math.random()*0.006; d.life = 1.0;
+  d.mesh.position.set(d.x, d.y, d.z);
+  d.mesh.material.opacity = 0.92;
+  d.mesh.scale.set(1, 1.3+Math.random()*0.5, 1);
+  d.mesh.visible = true;
+}
+
+// Splash particles
+const SPLASH_COUNT = 40;
+const splashPool = [];
+for (let i = 0; i < SPLASH_COUNT; i++) {
+  const m = new THREE.MeshBasicMaterial({ color: 0x66ccff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.025, 4, 3), m);
+  mesh.visible = false;
+  scene.add(mesh);
+  splashPool.push({ mesh, active: false, x:0, y:0, z:0, vx:0, vy:0, vz:0, life:0 });
+}
+function spawnSplash(x, z) {
+  for (let i = 0; i < 3; i++) {
+    const s = splashPool.find(s => !s.active);
+    if (!s) return;
+    s.active = true; s.x = x; s.y = 0.02; s.z = z;
+    const a = Math.random()*Math.PI*2;
+    const sp = 0.02 + Math.random()*0.03;
+    s.vx = Math.cos(a)*sp; s.vz = Math.sin(a)*sp;
+    s.vy = 0.015 + Math.random()*0.025; s.life = 0.6+Math.random()*0.4;
+    s.mesh.visible = true; s.mesh.material.opacity = 0.75;
+    s.mesh.position.set(s.x, s.y, s.z);
+  }
+}
+
+// Water flow particles (through pipes)
+const FLOW_COUNT = 80;
+const flowPool = [];
+for (let i = 0; i < FLOW_COUNT; i++) {
+  const m = new THREE.MeshBasicMaterial({ color: 0x33aaff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), m);
+  mesh.visible = false;
+  scene.add(mesh);
+  flowPool.push({ mesh, active: false, phase: 0, t: 0, speed: 0, row: 0 });
+}
+function spawnFlowParticle(targetRow) {
+  const f = flowPool.find(f => !f.active);
+  if (!f) return;
+  f.active = true; f.phase = 0; f.t = 0;
+  f.speed = 0.005 + Math.random()*0.008;
+  f.row = targetRow;
+  f.mesh.visible = true; f.mesh.material.opacity = 0.8;
+  f.mesh.material.color.setHex(0x33aaff);
+  f.mesh.position.set(-13, 0.09, -8);
+}
+
+// Wet soil spots
+const wetSpots = [];
+ROWS_X.forEach(rx => {
+  PLANTS_Z.forEach(rz => {
+    const m = new THREE.MeshBasicMaterial({ color: 0x3a2a10, transparent: true, opacity: 0, depthWrite: false });
+    const mesh = new THREE.Mesh(new THREE.CircleGeometry(0.35, 12), m);
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.set(rx, 0.006, rz);
+    scene.add(mesh);
+    wetSpots.push({ mesh, rx, rz, wetness: 0 });
+  });
+});
+
+// Rain particles
+const RAIN_COUNT = 250;
+const rainPool = [];
+for (let i = 0; i < RAIN_COUNT; i++) {
+  const geo = new THREE.CylinderGeometry(0.004, 0.004, 0.25, 3);
+  const m = new THREE.MeshBasicMaterial({ color: 0x88bbdd, transparent: true, opacity: 0 });
+  const mesh = new THREE.Mesh(geo, m);
+  mesh.visible = false;
+  scene.add(mesh);
+  rainPool.push({ mesh, active: false, x:0, y:0, z:0, speed: 0 });
+}
+function spawnRainDrop() {
+  const r = rainPool.find(r => !r.active);
+  if (!r) return;
+  r.active = true;
+  r.x = (Math.random()-0.5) * 35;
+  r.y = 14 + Math.random() * 5;
+  r.z = (Math.random()-0.5) * 25;
+  r.speed = 0.25 + Math.random() * 0.15;
+  r.mesh.visible = true;
+  r.mesh.material.opacity = 0.25 + Math.random() * 0.2;
+  r.mesh.position.set(r.x, r.y, r.z);
+}
+
+// Gateway signal packets (from gateway back to motor)
+const MOTOR_PKTS = 8;
+const motorPktPool = [];
+for (let i = 0; i < MOTOR_PKTS; i++) {
+  const m = new THREE.MeshBasicMaterial({ color: 0xff8800, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 4), m);
+  mesh.visible = false;
+  scene.add(mesh);
+  motorPktPool.push({ mesh, active: false, t: 0, speed: 0.007 });
+}
+function spawnMotorPkt() {
+  const p = motorPktPool.find(p => !p.active);
+  if (!p) return;
+  p.active = true; p.t = 0; p.speed = 0.006+Math.random()*0.005;
+  p.mesh.visible = true; p.mesh.material.opacity = 0.9;
+}
+
+// =============================================================
+// WEATHER ENGINE
+// =============================================================
+function updateWeather(dt) {
+  const w = sim.weather;
+  w.nextChange -= dt;
+
+  if (w.nextChange <= 0) {
+    // Transition to next weather state
+    if (w.condition === 'CLEAR') {
+      if (Math.random() < 0.4) {
+        w.condition = 'CLOUDY';
+        w.nextChange = 8 + Math.random() * 7;
+        w.rainForecast = Math.random() < 0.7;
+        w.rainChance = 40 + Math.random() * 30;
+        addAILog('rain', `Weather changing → Cloudy (${Math.round(w.rainChance)}% rain chance)`);
+      } else {
+        w.nextChange = 25 + Math.random() * 20;
+        w.rainChance = Math.max(5, w.rainChance - 10);
+      }
+    } else if (w.condition === 'CLOUDY') {
+      if (w.rainForecast || Math.random() < 0.5) {
+        w.condition = 'RAIN';
+        w.isRaining = true;
+        w.nextChange = 15 + Math.random() * 15;
+        w.rainChance = 85 + Math.random() * 15;
+        sim.rainEvents++;
+        addAILog('rain', `🌧 Rain started — irrigation paused for all rows`);
+        // Close all valves during rain
+        sim.rows.forEach((row, i) => {
+          if (row.irrigating) {
+            row.irrigating = false;
+            row.valveOpen = false;
+            addAILog('ok', `Row ${i+1} valve closed — rain provides water`);
+          }
+        });
+      } else {
+        w.condition = 'CLEAR';
+        w.nextChange = 30 + Math.random() * 20;
+        w.rainChance = 10 + Math.random() * 15;
+        w.rainForecast = false;
+      }
+    } else if (w.condition === 'RAIN') {
+      w.condition = 'CLOUDY';
+      w.isRaining = false;
+      w.nextChange = 5 + Math.random() * 5;
+      w.rainChance = 25;
+      w.rainForecast = false;
+      addAILog('ok', `Rain stopped — resuming normal monitoring`);
+    }
+  }
+
+  // Gradual rain chance transitions
+  if (w.condition === 'CLEAR' && w.rainChance > 10) w.rainChance -= dt * 2;
+  if (w.condition === 'RAIN') w.rainChance = Math.min(100, w.rainChance + dt * 5);
+}
+
+// =============================================================
+// SOIL SIMULATION ENGINE
+// =============================================================
+function updateSoil(dt) {
+  sim.rows.forEach((row, i) => {
+    const crop = CROPS[i];
+
+    // Temperature variation (sinusoidal with noise)
+    const hourAngle = (sim.clock.simHour / 24) * Math.PI * 2 - Math.PI/2;
+    const baseTemp = 28 + 6 * Math.sin(hourAngle); // 22-34°C daily cycle
+    row.temp = baseTemp + (Math.random()-0.5) * 0.8;
+
+    // Evaporation multiplier from temperature
+    const tempDeviation = Math.abs(row.temp - crop.idealTemp);
+    const tempMultiplier = 1.0 + tempDeviation * crop.tempCoeff;
+
+    // Drying
+    if (!sim.weather.isRaining) {
+      row.humidity -= crop.dryRate * tempMultiplier * dt;
+    } else {
+      // Rain increases humidity
+      row.humidity += 1.8 * dt; // rain adds moisture
+      // Rain decreases EC (dilution)
+      row.ec = Math.max(0.5, row.ec - 0.02 * dt);
+    }
+
+    // Irrigation filling
+    if (row.irrigating) {
+      row.humidity += crop.fillRate * dt;
+      // Irrigation slowly increases EC (salt from well water)
+      row.ec += 0.008 * dt;
+    }
+
+    // Clamp values
+    row.humidity = Math.max(5, Math.min(98, row.humidity));
+    row.ec = Math.max(0.5, Math.min(4.0, row.ec));
+
+    // Natural EC equilibrium drift
+    if (!row.irrigating && !sim.weather.isRaining) {
+      row.ec += (crop.ecBase - row.ec) * 0.002 * dt;
+    }
+  });
+}
+
+// =============================================================
+// AI DECISION ENGINE
+// =============================================================
+let lastAICheck = 0;
+const AI_CHECK_INTERVAL = 2.0; // check every 2 seconds
+
+function aiDecisionEngine(dt) {
+  lastAICheck += dt;
+  if (lastAICheck < AI_CHECK_INTERVAL) return;
+  lastAICheck = 0;
+
+  const w = sim.weather;
+  let anyValveOpen = false;
+
+  sim.rows.forEach((row, i) => {
+    const crop = CROPS[i];
+
+    if (row.irrigating) {
+      // Check if target reached
+      if (row.humidity >= crop.target) {
+        row.irrigating = false;
+        row.valveOpen = false;
+        row.cycles++;
+        sim.waterSaved += 1.5 + Math.random() * 2;
+        addAILog('ok', `Row ${i+1} ${crop.emoji} reached ${Math.round(row.humidity)}% → valve CLOSED ✓`);
+      } else {
+        anyValveOpen = true;
+      }
+    } else {
+      // Check if irrigation needed
+      if (row.humidity < crop.threshold) {
+        if (w.isRaining) {
+          // Rain detected — wait
+          addAILog('rain', `Row ${i+1} ${crop.emoji} needs water (${Math.round(row.humidity)}%) but rain active — WAITING`);
+        } else if (w.condition === 'CLOUDY' && w.rainChance > 60) {
+          // Rain forecast — delay
+          addAILog('rain', `Row ${i+1} ${crop.emoji} at ${Math.round(row.humidity)}% — rain likely (${Math.round(w.rainChance)}%) → DELAYING`);
+          sim.waterSaved += 0.3; // saved by waiting
+        } else {
+          // Irrigate!
+          row.irrigating = true;
+          row.valveOpen = true;
+          addAILog('irrigate', `Row ${i+1} ${crop.emoji} at ${Math.round(row.humidity)}% < threshold ${crop.threshold}% → IRRIGATE`);
+          anyValveOpen = true;
+        }
+      }
+    }
+
+    if (row.valveOpen) anyValveOpen = true;
+
+    // EC warning
+    if (row.ec > 2.8) {
+      addAILog('alert', `Row ${i+1} ${crop.emoji} EC high (${row.ec.toFixed(1)} dS/m) — salt buildup risk`);
+    }
+  });
+
+  sim.pumpActive = anyValveOpen;
+}
+
+// =============================================================
+// AI LOG
+// =============================================================
+function addAILog(type, msg) {
+  const timeStr = `${String(sim.clock.simHour).padStart(2,'0')}:${String(sim.clock.simMinute).padStart(2,'0')}`;
+  sim.aiLog.unshift({ type, msg, time: timeStr });
+  if (sim.aiLog.length > 8) sim.aiLog.pop();
+}
+
+// =============================================================
+// CAMERA ORBIT CONTROL
+// =============================================================
+let camTheta = 0.75;
+let camPhi = 0.55;
+const CAM_R = 31;
+let autoOrbit = true;
+let isDrag = false;
+let lastMX = 0, lastMY = 0;
+let autoResumeTimer = null;
+
+function updateCamera() {
+  camera.position.x = CAM_R * Math.cos(camPhi) * Math.cos(camTheta);
+  camera.position.y = CAM_R * Math.sin(camPhi);
+  camera.position.z = CAM_R * Math.cos(camPhi) * Math.sin(camTheta);
+  camera.lookAt(0, 1.5, 0);
+}
+renderer.domElement.addEventListener('mousedown', e => {
+  isDrag = true; lastMX = e.clientX; lastMY = e.clientY;
+  autoOrbit = false;
+  if (autoResumeTimer) clearTimeout(autoResumeTimer);
+});
+renderer.domElement.addEventListener('mouseup', () => {
+  isDrag = false;
+  autoResumeTimer = setTimeout(() => autoOrbit = true, 4000);
+});
+renderer.domElement.addEventListener('mousemove', e => {
+  if (!isDrag) return;
+  camTheta -= (e.clientX - lastMX) * 0.004;
+  camPhi = Math.max(0.12, Math.min(1.25, camPhi - (e.clientY - lastMY) * 0.003));
+  lastMX = e.clientX; lastMY = e.clientY;
+});
+renderer.domElement.addEventListener('touchstart', e => {
+  isDrag = true; lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+  autoOrbit = false; if (autoResumeTimer) clearTimeout(autoResumeTimer);
+}, { passive: true });
+renderer.domElement.addEventListener('touchend', () => {
+  isDrag = false;
+  autoResumeTimer = setTimeout(() => autoOrbit = true, 4000);
+});
+renderer.domElement.addEventListener('touchmove', e => {
+  if (!isDrag) return;
+  camTheta -= (e.touches[0].clientX - lastMX) * 0.004;
+  camPhi = Math.max(0.12, Math.min(1.25, camPhi - (e.touches[0].clientY - lastMY) * 0.003));
+  lastMX = e.touches[0].clientX; lastMY = e.touches[0].clientY;
+}, { passive: true });
+
+// =============================================================
+// UI UPDATE
+// =============================================================
+function updateUI() {
+  // Clock
+  const clockEl = document.getElementById('clock');
+  const weatherEmoji = sim.weather.isRaining ? '🌧' : sim.weather.condition === 'CLOUDY' ? '⛅' : '☀';
+  clockEl.textContent = `${weatherEmoji} ${String(sim.clock.simHour).padStart(2,'0')}:${String(sim.clock.simMinute).padStart(2,'0')} — Day ${sim.clock.day}`;
+
+  // Sensor panels per row
+  sim.rows.forEach((row, i) => {
+    const crop = CROPS[i];
+    const humPct = Math.round(row.humidity);
+    const ledEl = document.getElementById('led' + i);
+    const barEl = document.getElementById('bar' + i);
+    const humEl = document.getElementById('hum' + i);
+    const tempEl = document.getElementById('temp' + i);
+    const ecEl = document.getElementById('ec' + i);
+    const statusEl = document.getElementById('status' + i);
+
+    humEl.textContent = humPct + '%';
+    barEl.style.width = humPct + '%';
+    tempEl.textContent = row.temp.toFixed(1) + '°C';
+    ecEl.textContent = row.ec.toFixed(1) + ' dS';
+
+    if (row.irrigating) {
+      ledEl.className = 's-led blue';
+      barEl.style.background = '#4499ff';
+      statusEl.textContent = '💧 WATERING';
+      statusEl.className = 's-status watering';
+    } else if (sim.weather.isRaining && row.humidity < crop.threshold + 10) {
+      ledEl.className = 's-led blue';
+      barEl.style.background = '#aa88ff';
+      statusEl.textContent = '🌧 RAIN WAIT';
+      statusEl.className = 's-status rain-wait';
+    } else if (row.humidity < crop.threshold) {
+      ledEl.className = 's-led red';
+      barEl.style.background = '#ff3333';
+      statusEl.textContent = '⚠ DRY';
+      statusEl.className = 's-status low';
+    } else if (row.humidity < crop.threshold + 15) {
+      ledEl.className = 's-led yellow';
+      barEl.style.background = '#ffcc00';
+      statusEl.textContent = '~ MODERATE';
+      statusEl.className = 's-status moderate';
+    } else {
+      ledEl.className = 's-led green';
+      barEl.style.background = '#00ff88';
+      statusEl.textContent = '✓ OK';
+      statusEl.className = 's-status ok';
+    }
+
+    // AI panel row
+    const aiDesc = document.getElementById('ai-desc' + i);
+    const aiValve = document.getElementById('ai-valve' + i);
+    if (row.irrigating) {
+      aiDesc.textContent = `Watering (${humPct}%→${crop.target}%)`;
+      aiValve.textContent = 'OPEN';
+      aiValve.className = 'ai-row-valve open';
+    } else if (sim.weather.isRaining && row.humidity < crop.threshold + 10) {
+      aiDesc.textContent = `Rain delay (${humPct}%)`;
+      aiValve.textContent = 'RAIN';
+      aiValve.className = 'ai-row-valve rain';
+    } else if (row.humidity < crop.threshold) {
+      aiDesc.textContent = `Dry! (${humPct}%)`;
+      aiValve.textContent = 'PENDING';
+      aiValve.className = 'ai-row-valve closed';
+    } else {
+      aiDesc.textContent = `OK (${humPct}%)`;
+      aiValve.textContent = 'CLOSED';
+      aiValve.className = 'ai-row-valve closed';
+    }
+  });
+
+  // Pump status
+  const pumpEl = document.getElementById('pump-status');
+  if (sim.pumpActive) {
+    pumpEl.textContent = '● ON';
+    pumpEl.className = 'pump-val on';
+  } else {
+    pumpEl.textContent = 'OFF';
+    pumpEl.className = 'pump-val off';
+  }
+
+  // Total flow
+  const activeRows = sim.rows.filter(r => r.irrigating).length;
+  document.getElementById('total-flow').textContent = activeRows > 0 ? (activeRows * 4.5).toFixed(1) + ' L/h' : '0 L/h';
+
+  // Weather panel
+  const wIcons = { 'CLEAR': '☀️', 'CLOUDY': '⛅', 'RAIN': '🌧️' };
+  const wLabels = { 'CLEAR': 'Clear Sky', 'CLOUDY': 'Cloudy', 'RAIN': 'Raining' };
+  document.getElementById('w-icon').textContent = wIcons[sim.weather.condition] || '☀️';
+  document.getElementById('w-cond').textContent = wLabels[sim.weather.condition] || 'Clear';
+  document.getElementById('w-temp').textContent = Math.round(sim.rows[0].temp) + '°C';
+  document.getElementById('rain-bar').style.width = Math.round(sim.weather.rainChance) + '%';
+  document.getElementById('rain-pct').textContent = Math.round(sim.weather.rainChance) + '%';
+
+  const forecasts = {
+    'CLEAR': 'Next few hours: Clear skies expected',
+    'CLOUDY': sim.weather.rainForecast ? '⚠ Rain likely within 1-2 hours' : 'Partly cloudy · May clear up',
+    'RAIN': 'Active rainfall · AI irrigation paused',
+  };
+  document.getElementById('w-forecast').textContent = forecasts[sim.weather.condition] || '';
+
+  // Rain overlay
+  document.getElementById('rain-overlay').style.opacity = sim.weather.isRaining ? '1' : '0';
+
+  // Stats
+  document.getElementById('water-saved').textContent = sim.waterSaved.toFixed(1) + ' L';
+  document.getElementById('total-cycles').textContent = `R1:${sim.rows[0].cycles} R2:${sim.rows[1].cycles} R3:${sim.rows[2].cycles}`;
+  document.getElementById('rain-events').textContent = sim.rainEvents;
+  const mins = Math.floor(sim.clock.elapsed / 60);
+  const secs = Math.floor(sim.clock.elapsed % 60);
+  document.getElementById('runtime').textContent = `${mins}m ${secs}s`;
+
+  // AI Log
+  const logEl = document.getElementById('ai-log');
+  logEl.innerHTML = sim.aiLog.map(l =>
+    `<div class="ai-log-entry ${l.type}"><span class="log-time">[${l.time}]</span> ${l.msg}</div>`
+  ).join('');
+}
+
+// =============================================================
+// ANIMATION LOOP
+// =============================================================
+let frame = 0;
+let lastRingT = 0, lastDropT = 0, lastPktT = 0, lastMPktT = 0, lastFlowT = 0, lastRainT = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  frame++;
+  const now = Date.now();
+  const dt = Math.min((now - lastTime) / 1000, 0.1); // delta time in seconds, capped
+  lastTime = now;
+
+  // ── Simulation clock ──
+  sim.clock.elapsed += dt;
+  // 1 real second = ~10 simulated minutes
+  sim.clock.simMinute += dt * 10;
+  if (sim.clock.simMinute >= 60) {
+    sim.clock.simMinute -= 60;
+    sim.clock.simHour++;
+    if (sim.clock.simHour >= 24) {
+      sim.clock.simHour = 0;
+      sim.clock.day++;
+    }
+  }
+
+  // ── Update simulation ──
+  updateWeather(dt);
+  updateSoil(dt);
+  aiDecisionEngine(dt);
+
+  // ── Auto orbit ──
+  if (autoOrbit) camTheta += 0.0025;
+  updateCamera();
+
+  // ── Update UI (throttled) ──
+  if (frame % 6 === 0) updateUI();
+
+  // ── Fog color based on weather ──
+  const fogTarget = sim.weather.isRaining ? rainFogColor : baseFogColor;
+  scene.fog.color.lerp(fogTarget, 0.02);
+
+  // ── Cloud opacity ──
+  const cloudTarget = sim.weather.condition === 'CLEAR' ? 0 : (sim.weather.isRaining ? 0.35 : 0.2);
+  clouds.forEach(c => {
+    c.targetOpacity = cloudTarget;
+    c.mats.forEach(m => {
+      m.opacity += (c.targetOpacity - m.opacity) * 0.02;
+    });
+    // Slowly drift clouds
+    c.group.position.x += 0.003;
+    if (c.group.position.x > 25) c.group.position.x = -25;
+  });
+
+  // ── Sun dimming during rain ──
+  const sunTarget = sim.weather.isRaining ? 0.8 : 2.0;
+  sun.intensity += (sunTarget - sun.intensity) * 0.02;
+
+  // ── Node LEDs based on actual sensor data ──
+  sim.rows.forEach((row, i) => {
+    const crop = CROPS[i];
+    let col, lightCol, lInt;
+    if (row.irrigating) {
+      const pulse = 0.5 + 0.5 * Math.sin(frame * 0.15);
+      col = 0x4499ff; lightCol = 0x3388ee; lInt = 0.5 + pulse * 0.5;
+    } else if (row.humidity < crop.threshold) {
+      const pulse = 0.5 + 0.5 * Math.sin(frame * 0.18);
+      col = 0xff3333; lightCol = 0xff2200; lInt = 0.4 + pulse * 0.8;
+    } else if (row.humidity < crop.threshold + 15) {
+      col = 0xffcc00; lightCol = 0xffaa00; lInt = 0.3;
+    } else {
+      const p = 0.3 + 0.1 * Math.sin(frame * 0.04 + i * 1.8);
+      col = 0x00ff88; lightCol = 0x00ff44; lInt = p;
+    }
+    nodeLedMats[i].color.setHex(col);
+    nodeLedLights[i].color.setHex(lightCol);
+    nodeLedLights[i].intensity = lInt;
+  });
+
+  // ── Valve LEDs ──
+  sim.rows.forEach((row, i) => {
+    if (row.valveOpen) {
+      valveLedMats[i].color.setHex(0x4499ff);
+      valveGlowLights[i].intensity = 0.6 + 0.3 * Math.sin(frame * 0.12);
+      valveGlowLights[i].color.setHex(0x4499ff);
+    } else {
+      valveLedMats[i].color.setHex(0x333333);
+      valveGlowLights[i].intensity = 0;
+    }
+  });
+
+  // ── Signal rings ──
+  const anyDry = sim.rows.some((r, i) => r.humidity < CROPS[i].threshold);
+  const ringInterval = anyDry ? 300 : 700;
+  if (now - lastRingT > ringInterval) {
+    lastRingT = now;
+    NODE_POSITIONS.forEach((pos, i) => {
+      const row = sim.rows[i];
+      const crop = CROPS[i];
+      let col = 0x00e8ff;
+      let spd = 0.012;
+      if (row.humidity < crop.threshold) { col = 0xff3333; spd = 0.025; }
+      else if (row.irrigating) { col = 0x4499ff; spd = 0.018; }
+      spawnRing(pos.x, 0.95, pos.z, col, spd);
+      spawnRing(pos.x, 1.3, pos.z, col, spd * 0.9);
+    });
+    // Gateway rings
+    if (sim.pumpActive || anyDry) {
+      spawnRing(13, 4.3, 0, 0x00e8ff, 0.018);
+    }
+  }
+
+  // Update rings
+  ringPool.forEach(r => {
+    if (!r.active) return;
+    r.t += r.speed;
+    const s = 0.1 + r.t * 10;
+    r.mesh.scale.set(s, 1, s);
+    r.mesh.material.opacity = Math.max(0, 0.85 * (1 - r.t));
+    if (r.t >= 1) { r.active = false; r.mesh.visible = false; }
+  });
+
+  // ── Data packets: node → gateway ──
+  const anyNodeActive = sim.rows.some(r => r.irrigating) || anyDry;
+  const pktInterval = anyNodeActive ? 500 : 2000;
+  if (now - lastPktT > pktInterval) {
+    lastPktT = now;
+    // Send from the most relevant node
+    let ni = 0;
+    if (anyDry) {
+      ni = sim.rows.findIndex((r, i) => r.humidity < CROPS[i].threshold);
+      if (ni < 0) ni = Math.floor(Math.random() * 3);
+    } else {
+      ni = Math.floor(Math.random() * 3);
+    }
+    spawnPacket(ni);
+  }
+
+  pktPool.forEach(p => {
+    if (!p.active) return;
+    p.t += p.speed;
+    const np = NODE_POSITIONS[p.nodeIdx];
+    const sx = np.x, sy = 1.1, sz = np.z;
+    const ex = 13, ey = 4.0, ez = 0;
+    const t = p.t;
+    const arc = 5 * Math.sin(Math.PI * t);
+    p.mesh.position.set(sx+(ex-sx)*t, sy+(ey-sy)*t+arc, sz+(ez-sz)*t);
+    if (t > 0.75) p.mesh.material.opacity = (1-t)*4*0.95;
+    if (t >= 1) { p.active = false; p.mesh.visible = false; }
+  });
+
+  // ── Motor → gateway signal ──
+  const motorSignal = sim.pumpActive;
+  const mpInterval = motorSignal ? 700 : 9999;
+  if (now - lastMPktT > mpInterval) {
+    lastMPktT = now;
+    spawnMotorPkt();
+  }
+  motorPktPool.forEach(p => {
+    if (!p.active) return;
+    p.t += p.speed;
+    const t = p.t;
+    const sx = -12.72, sy = 1.3, sz = -8;
+    const ex = 13, ey = 4.0, ez = 0;
+    const arc = 6 * Math.sin(Math.PI * t);
+    p.mesh.position.set(sx+(ex-sx)*t, sy+(ey-sy)*t+arc, sz+(ez-sz)*t);
+    if (t > 0.75) p.mesh.material.opacity = (1-t)*4*0.9;
+    if (t >= 1) { p.active = false; p.mesh.visible = false; }
+  });
+
+  // ── Water drops from emitters (only for irrigating rows) ──
+  if (now - lastDropT > 65) {
+    lastDropT = now;
+    sim.rows.forEach((row, i) => {
+      if (!row.irrigating) return;
+      const rx = ROWS_X[i];
+      const rz = PLANTS_Z[Math.floor(Math.random() * PLANTS_Z.length)];
+      spawnDrop(rx, rz);
+      if (Math.random() < 0.5) spawnDrop(rx, PLANTS_Z[Math.floor(Math.random() * PLANTS_Z.length)]);
+    });
+  }
+
+  dropPool.forEach(d => {
+    if (!d.active) return;
+    d.vy -= 0.0014;
+    d.y += d.vy;
+    d.life -= 0.018;
+    const fallSpeed = Math.abs(d.vy);
+    d.mesh.scale.y = 1.3 + fallSpeed * 15;
+    d.mesh.position.set(d.x, d.y, d.z);
+    d.mesh.material.opacity = Math.max(0, d.life * 0.92);
+    if (d.life <= 0 || d.y < -0.02) {
+      if (d.y < 0.02 && d.y > -0.03) spawnSplash(d.x, d.z);
+      d.active = false; d.mesh.visible = false;
+    }
+  });
+
+  // ── Splash update ──
+  splashPool.forEach(s => {
+    if (!s.active) return;
+    s.x += s.vx; s.y += s.vy; s.z += s.vz;
+    s.vy -= 0.003;
+    s.life -= 0.045;
+    s.mesh.position.set(s.x, Math.max(0.005, s.y), s.z);
+    s.mesh.material.opacity = Math.max(0, s.life * 0.7);
+    if (s.life <= 0) { s.active = false; s.mesh.visible = false; }
+  });
+
+  // ── Water flow particles (only for irrigating rows) ──
+  if (now - lastFlowT > 55) {
+    lastFlowT = now;
+    sim.rows.forEach((row, i) => {
+      if (!row.irrigating) return;
+      spawnFlowParticle(i);
+      if (Math.random() < 0.4) spawnFlowParticle(i);
+    });
+  }
+
+  flowPool.forEach(f => {
+    if (!f.active) return;
+    f.t += f.speed;
+    if (f.phase === 0) {
+      const startX = -13;
+      const targetX = ROWS_X[f.row];
+      const cx = startX + (targetX - startX) * f.t;
+      const wobble = Math.sin(f.t * Math.PI * 6) * 0.015;
+      f.mesh.position.set(cx, 0.09 + wobble, -8);
+      const brightness = 0.6 + 0.4 * Math.sin(f.t * Math.PI);
+      f.mesh.material.opacity = brightness;
+      f.mesh.scale.setScalar(0.8 + 0.4 * brightness);
+      if (f.t >= 1.0) { f.phase = 1; f.t = 0; }
+    } else if (f.phase === 1) {
+      const rx = ROWS_X[f.row];
+      const cz = -8 + 16 * f.t;
+      const wobble = Math.sin(f.t * Math.PI * 8) * 0.012;
+      f.mesh.position.set(rx + wobble, 0.09, cz);
+      f.mesh.material.color.setRGB(0.2 + f.t*0.15, 0.65 + f.t*0.2, 1.0);
+      f.mesh.material.opacity = 0.75 * (1.0 - f.t*0.4);
+      if (f.t >= 1.0) { f.active = false; f.mesh.visible = false; }
+    }
+  });
+
+  // ── Wet soil spots ──
+  wetSpots.forEach(ws => {
+    const rowIdx = ROWS_X.indexOf(ws.rx);
+    const isRowIrrigating = rowIdx >= 0 && sim.rows[rowIdx] && sim.rows[rowIdx].irrigating;
+    if (isRowIrrigating || sim.weather.isRaining) {
+      const target = isRowIrrigating ? 0.5 : 0.25;
+      ws.wetness += (target - ws.wetness) * 0.015;
+    } else {
+      ws.wetness *= 0.997;
+    }
+    ws.mesh.material.opacity = ws.wetness;
+    const sc = 0.6 + ws.wetness * 0.8;
+    ws.mesh.scale.set(sc, sc, 1);
+  });
+
+  // ── Rain particles ──
+  if (sim.weather.isRaining && now - lastRainT > 15) {
+    lastRainT = now;
+    for (let i = 0; i < 4; i++) spawnRainDrop();
+  }
+  rainPool.forEach(r => {
+    if (!r.active) return;
+    r.y -= r.speed;
+    r.x += 0.01; // slight wind
+    r.mesh.position.set(r.x, r.y, r.z);
+    if (r.y < 0) {
+      r.active = false;
+      r.mesh.visible = false;
+      // Tiny splash where rain hits
+      if (Math.random() < 0.1) spawnSplash(r.x, r.z);
+    }
+  });
+
+  // ── Well water animation ──
+  if (sim.pumpActive) {
+    wellWaterMat.opacity = 0.5 + 0.15 * Math.sin(frame * 0.08);
+    wellWater.position.y = 0.18 + 0.03 * Math.sin(frame * 0.06);
+    wellGlow.intensity = 0.8 + 0.4 * Math.sin(frame * 0.1);
+    const ripple = 1.0 + 0.05 * Math.sin(frame * 0.15);
+    wellWater.scale.set(ripple, ripple, 1);
+  } else {
+    wellWaterMat.opacity = 0.25;
+    wellWater.position.y = 0.12;
+    wellGlow.intensity = 0;
+    wellWater.scale.set(1, 1, 1);
+  }
+
+  // ── Pipe glow (per-row, only for irrigating rows) ──
+  rowPipeMats.forEach((pm, i) => {
+    if (sim.rows[i] && sim.rows[i].irrigating) {
+      const wave = Math.sin(frame * 0.08 - i * 1.2);
+      const glow = 0.06 + 0.04 * wave;
+      pm.emissive.setRGB(0, glow * 0.35, glow);
+    } else {
+      pm.emissive.setRGB(0, 0, 0);
+    }
+  });
+  if (sim.pumpActive) {
+    const mainWave = 0.04 + 0.025 * Math.sin(frame * 0.1);
+    mainPipeMat.emissive.setRGB(0, mainWave * 0.3, mainWave);
+  } else {
+    mainPipeMat.emissive.setRGB(0, 0, 0);
+  }
+
+  // ── Motor rotation & glow ──
+  if (sim.pumpActive) {
+    handleGroup.rotation.y += 0.05;
+    motorBoxMat.emissive.setRGB(0.12, 0.05, 0);
+    motorLedMat.color.setHex(0xff6600);
+    motorGlow.intensity = 0.8 + 0.4 * Math.sin(frame * 0.2);
+    motorGlow.color.setHex(0xff6600);
+  } else {
+    motorBoxMat.emissive.setRGB(0, 0, 0);
+    motorLedMat.color.setHex(0x112233);
+    motorGlow.intensity = 0;
+  }
+
+  // ── Gateway glow ──
+  if (sim.pumpActive) {
+    gwGlow.intensity = 1.2 + 0.5 * Math.sin(frame * 0.15);
+  } else if (anyDry) {
+    gwGlow.intensity = 0.8 + 0.4 * Math.sin(frame * 0.22);
+  } else {
+    gwGlow.intensity = 0.4 + 0.1 * Math.sin(frame * 0.05);
+  }
+
+  renderer.render(scene, camera);
+}
+
+// Initialize first AI log entry
+addAILog('ok', 'FallahTech AI initialized — monitoring 3 crop rows');
+addAILog('ok', `Row 1: 🌴 Date Palm (slow drying, threshold ${CROPS[0].threshold}%)`);
+addAILog('ok', `Row 2: 🌶️ Chili Pepper (medium drying, threshold ${CROPS[1].threshold}%)`);
+addAILog('ok', `Row 3: 🍉 Watermelon (fast drying, threshold ${CROPS[2].threshold}%)`);
+
+animate();
+</script>
+</body>
+</html>

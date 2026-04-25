@@ -1,69 +1,53 @@
-# 🌴 Gabes bin ydik (ڤَابس بين يديك)
-### Smart Agriculture & IoT Solutions for the Gabès Oasis
+<div align="center">
+  <img src="public/logo.png" alt="Gabes bin ydik Logo" width="120" />
+  <h1>🌴 Gabes bin ydik (ڤَابس بين يديك)</h1>
+  <p><strong>Smart Agriculture & IoT Solutions for the Gabès Oasis</strong></p>
 
-**Gabes bin ydik** is an innovative platform designed to revolutionize agriculture in the Tunisian oasis of Gabès. By combining **Internet of Things (IoT)** sensors with **Artificial Intelligence (AI)**, the platform helps farmers optimize water consumption, monitor environmental health, and modernize their agricultural practices in the face of climate change.
+  [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+  [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+</div>
 
 ---
 
-## 🚀 Key Features
+<div align="center">
+  <img src="public/smart_oasis_farm.png" alt="Smart Oasis Farm Banner" width="100%" />
+</div>
 
-### 1. 💧 Smart Irrigation & AI Prediction
-- **Real-time Monitoring**: Track soil moisture, temperature, and light intensity through connected IoT sensors.
-- **AI-Driven Automation**: Our machine learning models analyze sensor data to predict the exact moment crops need water, preventing waste and ensuring optimal growth.
-- **Manual & Auto Control**: Farmers can toggle irrigation pumps directly from their dashboard or let the AI manage it autonomously.
+## 🌟 Overview
 
-### 2. 🌬️ Environmental Health & Air Quality
-- **Pollution Heatmap**: A dynamic map visualizing PM2.5 and air quality levels across different zones of Gabès.
-- **Community Alerts**: Real-time alerts to inform citizens and farmers about high pollution levels, helping to protect health and crops.
+**Gabes bin ydik** is a state-of-the-art platform designed to preserve and modernize the agricultural heritage of the Tunisian oasis of Gabès. By bridging the gap between **Internet of Things (IoT)** and **Artificial Intelligence (AI)**, we empower local farmers to combat climate change through data-driven precision farming.
+
+---
+
+## 🚀 Core Features
+
+### 1. 💧 Intelligent Irrigation & AI Forecasting
+*   **Precision Monitoring:** Live telemetry from soil moisture, temperature, and light sensors.
+*   **Predictive AI:** Proprietary models analyze environmental trends to forecast irrigation needs, optimizing every drop of water.
+*   **Dual Control:** Seamless switching between autonomous AI-managed irrigation and manual overrides via the dashboard.
+
+### 2. 🌬️ Air Quality & Environmental Stewardship
+*   **Pollution Heatmaps:** Geospatial visualization of PM2.5 levels across Gabès using Leaflet.
+*   **Public Safety Alerts:** Instant notifications for farmers and citizens when air quality reaches hazardous levels.
 
 ### 3. 🤖 اسألني (Ask Me) - AI Agricultural Assistant
-- **Tunisian Arabic (Derja)**: A specialized chatbot that speaks the local language of Gabès farmers.
-- **Expert Advice**: Get immediate answers to questions about pest control, crop rotation, and sustainable farming specifically for oasis environments.
-- **Publicly Accessible**: Available directly on the landing page for all visitors.
+*   **Localized Intelligence:** A specialized chatbot fluent in **Tunisian Arabic (Derja)**, tailored for the specific needs of oasis farmers.
+*   **Sustainable Expertise:** Expert guidance on pest management, crop rotation, and traditional oasis farming techniques.
 
-### 4. 📊 Unified Management Dashboard
-- **Farmer View**: Direct access to sensor data, irrigation history, and AI insights.
-- **Admin Panel**: A centralized interface for city officials to manage installation requests, send automated professional emails to farmers, and track city-wide agricultural stats.
-
-### 5. 🏠 Premium Landing Page
-- **Dynamic Statistics**: Real-time data extraction from platform records (water saved, data points analyzed).
-- **Public Requests**: Easy-to-use form for farmers to request an IoT installation in their farm.
-- **Stunning UI**: A modern, responsive design inspired by the lush landscape of Gabès.
+### 4. 📊 Enterprise Management Dashboard
+*   **Farmer Portal:** Personalized insights, irrigation logs, and crop health status.
+*   **Administrative Suite:** Centralized management for IoT installation requests, automated professional communication (SMTP), and regional agricultural analytics.
 
 ---
 
-## 🛠️ Tech Stack
+## 🎮 Interactive 3D Visualization
 
-- **Framework**: [Next.js 15](https://nextjs.org/) (App Router, TypeScript)
-- **Styling**: Tailwind CSS & Lucide Icons
-- **Database & Auth**: [Firebase](https://firebase.google.com/) (Firestore, Auth)
-- **AI Integration**: Google Gemini AI (via OpenRouter/Google AI SDK)
-- **Communication**: Nodemailer (SMTP) for administrative follow-ups
-- **Visualization**: Motion (Framer Motion) for smooth animations & Leaflet for geospatial heatmaps
+Experience the future of oasis farming with our **FallahTech 3D Simulation**. This immersive visualization demonstrates the real-time interaction between IoT sensors, AI decision-making, and automated irrigation systems in a virtual Gabès field.
 
----
-
-## 📦 Installation & Setup
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/ezzeddine-cloud/AIMKEY.git
-   cd AIMKEY
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Configure Environment Variables**:
-   Create a `.env.local` file with your Firebase, Gemini, and SMTP credentials (refer to `.env.example`).
-
-4. **Run the development server**:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3030](http://localhost:3030) to see the result.
+> [!TIP]
+> **View the Demo:** You can explore the 3D visualization by opening [public/fallahtech_3d.html](public/fallahtech_3d.html) in your browser.
 
 ---
 
@@ -85,16 +69,54 @@ The platform leverages the following publicly available datasets and hardware do
 
 ---
 
-## 📸 Project Gallery
+## 🛠️ Technology Stack
 
-*The platform features a custom-designed logo representing a technology-integrated palm tree supported by the hand of the community.*
+| Category | Technologies |
+| :--- | :--- |
+| **Frontend** | Next.js 15 (App Router), TypeScript, Tailwind CSS, Framer Motion |
+| **Backend/Cloud** | Firebase (Firestore, Authentication, Hosting) |
+| **AI/ML** | Google Gemini AI, Python (Scikit-learn/TensorFlow for live prediction) |
+| **Mapping** | Leaflet.js with custom heatmap overlays |
+| **Communication** | Nodemailer (SMTP) for official administrative alerts |
+
+---
+
+## 📦 Installation & Configuration
+
+### Prerequisites
+- Node.js 18+
+- Firebase Project
+- Google AI (Gemini) API Key
+
+### Setup Steps
+1.  **Clone the Repository**
+    ```bash
+    git clone https://github.com/ezzeddine-cloud/AIMKEY.git
+    cd AIMKEY
+    ```
+2.  **Install Dependencies**
+    ```bash
+    npm install
+    ```
+3.  **Environment Variables**
+    Copy `.env.example` to `.env.local` and populate your credentials:
+    ```bash
+    cp .env.example .env.local
+    ```
+4.  **Launch Development Server**
+    - **Standard Dev:** `npm run dev` (Runs on `http://localhost:3030`)
+    - **With Firebase Emulators:** `npm run dev:stack` (Runs both Next.js and Local Firebase Emulators)
+    - **Clean Dev:** `npm run dev:clean` (Clears Next.js cache before starting)
 
 ---
 
 ## 🏆 Hackathon Project
 
-Developed with ❤️ for the **AIMKEY Hackathon**.
+Developed with passion for the **AIMKEY Hackathon**.  
+**Gabes bin ydik** represents a vision where technology honors tradition, ensuring that the ancient oases of Gabès thrive in the digital age.
 
-**Gabes bin ydik** aims to preserve the heritage of our oases while embracing the future of smart cities.
+---
 
-© 2026 Smart City Gabes Team.
+<div align="center">
+  <p>© 2026 Smart City Gabes Team. Built with ❤️ for a greener tomorrow.</p>
+</div>

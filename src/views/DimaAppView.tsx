@@ -60,11 +60,6 @@ function navForRole(role: UserRole, t: (fr: string, ar: string) => string): NavI
     ];
   }
   return [
-    // Tech Dash (IoT & IA)
-    { id: "capteur", label: t("Capteur sol", "مستشعر التربة"), icon: Layers3 },
-    { id: "eau", label: t("Modèle gaspillage d’eau", "نموذج هدر المياه"), icon: Droplets },
-    { id: "pollution", label: t("Alerte & heatmap pollution air", "تنبيه وخريطة تلوث الهواء"), icon: Wind },
-
     // Admin Dash
     { id: "reclamations", label: t("Réclamation", "شكوى"), icon: Inbox },
     { id: "installations", label: t("Demandes d'installation", "طلبات التركيب"), icon: ClipboardList },
