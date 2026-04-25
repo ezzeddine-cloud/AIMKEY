@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/logo.png" alt="Gabes bin ydik Logo" width="120" />
+  <img src="./public/logo.png" alt="Gabes bin ydik Logo" width="120" />
   <h1>🌴 Gabes bin ydik (ڤَابس بين يديك)</h1>
   <p><strong>Smart Agriculture & IoT Solutions for the Gabès Oasis</strong></p>
 
@@ -12,7 +12,7 @@
 ---
 
 <div align="center">
-  <img src="public/smart_oasis_farm.png" alt="Smart Oasis Farm Banner" width="100%" />
+  <img src="./public/smart_oasis_farm.png" alt="Smart Oasis Farm Banner" width="100%" />
 </div>
 
 ## 🌟 Overview
